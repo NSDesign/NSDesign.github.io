@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         repo3: {
             owner: 'NSDeisgn',
-            name: 'repository3',
+            name: 'Interactive-Point-Blur-Image-Filter',
             branch: 'main',
             path: 'index.html'
         }
