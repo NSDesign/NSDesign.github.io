@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Repository Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, slate-grey 0%, slate-dark-grey 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #2d3748;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .repo-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .repo-input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        input[type="text"] {
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, slate-grey 0%, slate-dark-grey 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .repo-menu {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .repo-tab {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .repo-tab:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+        }
+
+        .repo-tab.active {
+            background: white;
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .repo-tab .remove-btn {
+            margin-left: 10px;
+            color: #e53e3e;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .content-area {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            position: relative;
+            min-height: 600px;
+        }
+
+        .content-header {
+            background: #f7fafc;
+            padding: 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .content-info {
+            flex: 1;
+        }
+
+        .content-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .content-meta {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .view-mode-btn {
+            padding: 8px 16px;
+            background: #e2e8f0;
+            color: #4a5568;
+            font-size: 12px;
+            border-radius: 8px;
+        }
+
+        .view-mode-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        #content-container {
+            min-height: 500px;
+            position: relative;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .loading::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            padding: 40px;
+            text-align: center;
+            color: #e53e3e;
+            background: #fed7d7;
+            margin: 20px;
+            border-radius: 12px;
+        }
+
+        .content-iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+
+        .content-html {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .file-explorer {
+            background: #f7fafc;
+            border-right: 1px solid #e2e8f0;
+            width: 300px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        .file-tree {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .file-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin: 2px 0;
+            transition: background-color 0.2s;
+        }
+
+        .file-item:hover {
+            background: #e2e8f0;
+        }
+
+        .file-item.selected {
+            background: #667eea;
+            color: white;
+        }
+
+        .split-view {
+            display: flex;
+            height: 600px;
+        }
+
+        .repo-not-found {
+            padding: 40px;
+            text-align: center;
+            color: #718096;
+        }
+
+        .structure-info {
+            background: #f0f9ff;
+            padding: 15px;
+            margin: 15px 20px;
+            border-radius: 8px;
+            border-left: 4px solid #0ea5e9;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Intelligent Multi-Repository Viewer</h1>
+            
+            <div class="repo-controls">
+                <div class="repo-input-group">
+                    <input type="text" id="owner-input" placeholder="GitHub Username" value="">
+                    <input type="text" id="repo-input" placeholder="Repository Name" value="">
+                    <button onclick="addRepository()">Add Repository</button>
+                </div>
+                <button onclick="analyzeAllStructures()">Analyze All Structures</button>
+            </div>
+
+            <div class="repo-menu" id="repo-menu">
+                <!-- Repository tabs will be added here -->
+            </div>
+        </header>
+
+        <div class="content-area">
+            <div class="content-header">
+                <div class="content-info">
+                    <div class="content-title" id="content-title">Select a repository to view</div>
+                    <div class="content-meta" id="content-meta">Add repositories using the form above</div>
+                </div>
+                <div class="view-controls">
+                    <button class="view-mode-btn active" onclick="setViewMode('auto')" data-mode="auto">Auto</button>
+                    <button class="view-mode-btn" onclick="setViewMode('iframe')" data-mode="iframe">iFrame</button>
+                    <button class="view-mode-btn" onclick="setViewMode('html')" data-mode="html">HTML</button>
+                    <button class="view-mode-btn" onclick="setViewMode('explore')" data-mode="explore">Explore</button>
+                </div>
+            </div>
+            
+            <div id="content-container">
+                <div class="repo-not-found">
+                    <h3>👋 Welcome!</h3>
+                    <p>Add your first repository to get started</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration and state
+        let repositories = [];
+        let currentRepo = null;
+        let currentViewMode = 'auto';
+        let repoStructures = new Map();
+
+        // Common file patterns for different types of projects
+        const FILE_PATTERNS = {
+            entry_files: [
+                'index.html',
+                'public/index.html',
+                'dist/index.html',
+                'build/index.html',
+                '_site/index.html',
+                'docs/index.html',
+                'web/index.html',
+                'src/index.html',
+                'app/index.html'
+            ],
+            style_files: [
+                'style.css',
+                'styles.css',
+                'main.css',
+                'app.css',
+                'css/style.css',
+                'css/styles.css',
+                'css/main.css',
+                'assets/css/style.css',
+                'assets/css/styles.css',
+                'assets/style.css',
+                'public/css/style.css',
+                'dist/css/style.css',
+                'src/css/style.css'
+            ],
+            script_files: [
+                'script.js',
+                'scripts.js',
+                'main.js',
+                'app.js',
+                'index.js',
+                'js/script.js',
+                'js/scripts.js',
+                'js/main.js',
+                'assets/js/script.js',
+                'assets/js/main.js',
+                'public/js/script.js',
+                'dist/js/main.js',
+                'src/js/script.js'
+            ]
+        };
+
+        // Initialize with some example repositories
+        function initializeExamples() {
+            // You can pre-populate with your own repositories
+            // addRepositoryToList('your-username', 'repo1');
+            // addRepositoryToList('your-username', 'repo2');
+        }
+
+        // Add repository from input fields
+        function addRepository() {
+            const owner = document.getElementById('owner-input').value.trim();
+            const repo = document.getElementById('repo-input').value.trim();
+            
+            if (!owner || !repo) {
+                alert('Please enter both username and repository name');
+                return;
+            }
+            
+            addRepositoryToList(owner, repo);
+            
+            // Clear inputs
+            document.getElementById('owner-input').value = '';
+            document.getElementById('repo-input').value = '';
+        }
+
+        // Add repository to the list
+        function addRepositoryToList(owner, repo) {
+            const repoId = `${owner}/${repo}`;
+            
+            // Check if already exists
+            if (repositories.find(r => r.id === repoId)) {
+                alert('Repository already added');
+                return;
+            }
+            
+            const repoObj = {
+                id: repoId,
+                owner: owner,
+                name: repo,
+                structure: null
+            };
+            
+            repositories.push(repoObj);
+            updateRepoMenu();
+            
+            // Automatically analyze structure
+            analyzeRepositoryStructure(repoObj);
+        }
+
+        // Update repository menu
+        function updateRepoMenu() {
+            const menu = document.getElementById('repo-menu');
+            menu.innerHTML = '';
+            
+            repositories.forEach(repo => {
+                const tab = document.createElement('div');
+                tab.className = 'repo-tab';
+                tab.innerHTML = `
+                    ${repo.name}
+                    <span class="remove-btn" onclick="removeRepository('${repo.id}')">&times;</span>
+                `;
+                tab.onclick = (e) => {
+                    if (e.target.classList.contains('remove-btn')) return;
+                    selectRepository(repo.id);
+                };
+                menu.appendChild(tab);
+            });
+        }
+
+        // Remove repository
+        function removeRepository(repoId) {
+            repositories = repositories.filter(r => r.id !== repoId);
+            if (currentRepo && currentRepo.id === repoId) {
+                currentRepo = null;
+                updateContentArea();
+            }
+            updateRepoMenu();
+        }
+
+        // Select repository
+        function selectRepository(repoId) {
+            const repo = repositories.find(r => r.id === repoId);
+            if (!repo) return;
+            
+            currentRepo = repo;
+            
+            // Update active tab
+            document.querySelectorAll('.repo-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent.includes(repo.name)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            loadRepositoryContent();
+        }
+
+        // Analyze repository structure using GitHub API with CORS handling
+        async function analyzeRepositoryStructure(repo) {
+            try {
+                console.log(`Analyzing structure for ${repo.id}`);
+                
+                // Try multiple approaches for accessing GitHub API
+                let response;
+                let contents;
+                
+                // Method 1: Try direct GitHub API (may fail due to CORS)
+                try {
+                    response = await fetch(`https://api.github.com/repos/${repo.owner}/${repo.name}/contents`);
+                    if (response.ok) {
+                        contents = await response.json();
+                    } else if (response.status === 404) {
+                        throw new Error('Repository not found or is private');
+                    } else {
+                        throw new Error(`GitHub API returned ${response.status}`);
+                    }
+                } catch (corsError) {
+                    console.log('Direct API failed, trying CORS proxy...');
+                    
+                    // Method 2: Try with CORS proxy
+                    try {
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(`https://api.github.com/repos/${repo.owner}/${repo.name}/contents`)}`;
+                        response = await fetch(proxyUrl);
+                        if (response.ok) {
+                            const proxyData = await response.json();
+                            contents = JSON.parse(proxyData.contents);
+                        } else {
+                            throw new Error('CORS proxy failed');
+                        }
+                    } catch (proxyError) {
+                        console.log('CORS proxy failed, using fallback method...');
+                        
+                        // Method 3: Create a basic structure based on common patterns
+                        const fallbackStructure = await createFallbackStructure(repo);
+                        repo.structure = fallbackStructure;
+                        repoStructures.set(repo.id, fallbackStructure);
+                        
+                        if (currentRepo && currentRepo.id === repo.id) {
+                            loadRepositoryContent();
+                        }
+                        return;
+                    }
+                }
+                
+                // If we got here, we have contents - proceed with analysis
+                const structure = await exploreDirectory(repo.owner, repo.name, '', 2, contents);
+                repo.structure = structure;
+                repoStructures.set(repo.id, structure);
+                
+                console.log(`Structure analyzed for ${repo.id}:`, structure);
+                
+                if (currentRepo && currentRepo.id === repo.id) {
+                    loadRepositoryContent();
+                }
+                
+            } catch (error) {
+                console.error(`Error analyzing ${repo.id}:`, error);
+                const fallbackStructure = await createFallbackStructure(repo);
+                repo.structure = fallbackStructure;
+                repoStructures.set(repo.id, fallbackStructure);
+                
+                if (currentRepo && currentRepo.id === repo.id) {
+                    loadRepositoryContent();
+                }
+            }
+        }
+
+        // Create fallback structure when API access fails
+        async function createFallbackStructure(repo) {
+            return {
+                fallback: true,
+                files: [
+                    {
+                        name: 'index.html',
+                        path: 'index.html',
+                        download_url: `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/main/index.html`
+                    },
+                    {
+                        name: 'index.html',
+                        path: 'public/index.html',
+                        download_url: `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/main/public/index.html`
+                    },
+                    {
+                        name: 'index.html',
+                        path: 'dist/index.html',
+                        download_url: `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/main/dist/index.html`
+                    }
+                ],
+                note: 'API access limited - using common file patterns'
+            };
+        }
+
+        // Recursively explore directory structure with better error handling
+        async function exploreDirectory(owner, repo, path = '', maxDepth = 2, providedContents = null, currentDepth = 0) {
+            if (currentDepth >= maxDepth) return null;
+            
+            try {
+                let contents;
+                
+                if (providedContents && path === '') {
+                    // Use provided contents for root directory
+                    contents = providedContents;
+                } else {
+                    // Fetch contents for subdirectories
+                    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                    
+                    // Try direct fetch first
+                    let response;
+                    try {
+                        response = await fetch(url);
+                        if (!response.ok) throw new Error('Direct fetch failed');
+                        contents = await response.json();
+                    } catch (directError) {
+                        // Try with CORS proxy
+                        try {
+                            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                            response = await fetch(proxyUrl);
+                            if (response.ok) {
+                                const proxyData = await response.json();
+                                contents = JSON.parse(proxyData.contents);
+                            } else {
+                                throw new Error('Proxy fetch failed');
+                            }
+                        } catch (proxyError) {
+                            return null; // Skip this directory if we can't access it
+                        }
+                    }
+                }
+                
+                const structure = {
+                    files: [],
+                    directories: {}
+                };
+                
+                for (const item of contents) {
+                    if (item.type === 'file') {
+                        structure.files.push({
+                            name: item.name,
+                            path: item.path,
+                            size: item.size,
+                            download_url: item.download_url
+                        });
+                    } else if (item.type === 'dir' && currentDepth < maxDepth - 1) {
+                        const subDir = await exploreDirectory(owner, repo, item.path, maxDepth, null, currentDepth + 1);
+                        if (subDir) {
+                            structure.directories[item.name] = subDir;
+                        }
+                    }
+                }
+                
+                return structure;
+                
+            } catch (error) {
+                console.error(`Error exploring directory ${path}:`, error);
+                return null;
+            }
+        }
+
+        // Find best entry point for a repository
+        function findBestEntryPoint(structure) {
+            if (!structure || structure.error) return null;
+            
+            const allFiles = [];
+            
+            // Collect all files from structure
+            function collectFiles(struct, basePath = '') {
+                if (struct.files) {
+                    struct.files.forEach(file => {
+                        allFiles.push({
+                            ...file,
+                            fullPath: basePath ? `${basePath}/${file.name}` : file.name
+                        });
+                    });
+                }
+                
+                if (struct.directories) {
+                    Object.entries(struct.directories).forEach(([dirName, dirStruct]) => {
+                        const newPath = basePath ? `${basePath}/${dirName}` : dirName;
+                        collectFiles(dirStruct, newPath);
+                    });
+                }
+            }
+            
+            collectFiles(structure);
+            
+            // Look for entry files in order of preference
+            for (const pattern of FILE_PATTERNS.entry_files) {
+                const found = allFiles.find(file => 
+                    file.fullPath === pattern || file.fullPath.endsWith(`/${pattern}`)
+                );
+                if (found) {
+                    return {
+                        type: 'entry',
+                        file: found,
+                        confidence: 'high'
+                    };
+                }
+            }
+            
+            // Look for any HTML file
+            const htmlFiles = allFiles.filter(file => file.name.endsWith('.html'));
+            if (htmlFiles.length > 0) {
+                return {
+                    type: 'html',
+                    file: htmlFiles[0],
+                    confidence: 'medium'
+                };
+            }
+            
+            // Look for README
+            const readmeFile = allFiles.find(file => 
+                file.name.toLowerCase().startsWith('readme')
+            );
+            if (readmeFile) {
+                return {
+                    type: 'readme',
+                    file: readmeFile,
+                    confidence: 'low'
+                };
+            }
+            
+            return null;
+        }
+
+        // Load repository content
+        async function loadRepositoryContent() {
+            if (!currentRepo) return;
+            
+            updateContentInfo();
+            
+            const container = document.getElementById('content-container');
+            container.innerHTML = '<div class="loading">Loading content...</div>';
+            
+            try {
+                const structure = repoStructures.get(currentRepo.id) || currentRepo.structure;
+                
+                if (!structure) {
+                    container.innerHTML = '<div class="loading">Analyzing repository structure...</div>';
+                    await analyzeRepositoryStructure(currentRepo);
+                    return loadRepositoryContent(); // Retry after analysis
+                }
+                
+                if (structure.error) {
+                    throw new Error(structure.error);
+                }
+                
+                const entryPoint = findBestEntryPoint(structure);
+                
+                if (currentViewMode === 'auto') {
+                    await loadAutoMode(entryPoint, structure);
+                } else if (currentViewMode === 'iframe') {
+                    loadIframeMode();
+                } else if (currentViewMode === 'html') {
+                    await loadHtmlMode(entryPoint);
+                } else if (currentViewMode === 'explore') {
+                    loadExploreMode(structure);
+                }
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error loading repository: ${error.message}</div>`;
+            }
+        }
+
+        // Auto mode - intelligent content loading with fallback handling
+        async function loadAutoMode(entryPoint, structure) {
+            const container = document.getElementById('content-container');
+            
+            // Handle fallback structures (when API access is limited)
+            if (structure && structure.fallback) {
+                container.innerHTML = `
+                    <div class="structure-info">
+                        <strong>⚠️ Limited API Access</strong><br>
+                        ${structure.note}<br><br>
+                        Trying common file locations:
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>Root: index.html</li>
+                            <li>Public folder: public/index.html</li>
+                            <li>Dist folder: dist/index.html</li>
+                        </ul>
+                        <br>
+                        <button onclick="loadIframeMode()" style="margin-right: 10px;">Try GitHub Pages</button>
+                        <button onclick="loadFallbackHtml()">Try Raw HTML</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (!entryPoint) {
+                container.innerHTML = `
+                    <div class="structure-info">
+                        <strong>Repository Structure Detected</strong><br>
+                        No obvious entry point found. This repository may contain:
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>Source code files</li>
+                            <li>Documentation</li>
+                            <li>Configuration files</li>
+                        </ul>
+                        <br>
+                        <button onclick="loadIframeMode()" style="margin-right: 10px;">Try GitHub Pages</button>
+                        <button onclick="setViewMode('explore')">Browse Files</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="structure-info">
+                    <strong>Auto-detected entry point:</strong> ${entryPoint.file.fullPath} 
+                    (${entryPoint.confidence} confidence)
+                </div>
+            `;
+            
+            if (entryPoint.type === 'entry' || entryPoint.type === 'html') {
+                // Try iframe first, fallback to raw HTML
+                const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+                
+                // Check if GitHub Pages is available
+                try {
+                    const response = await fetch(githubPagesUrl, { mode: 'no-cors' });
+                    loadIframeMode(githubPagesUrl);
+                } catch {
+                    // Fallback to raw file content
+                    await loadHtmlMode(entryPoint);
+                }
+            } else if (entryPoint.type === 'readme') {
+                await loadMarkdownContent(entryPoint.file);
+            }
+        }
+
+        // Load fallback HTML when API access is limited
+        async function loadFallbackHtml() {
+            const structure = repoStructures.get(currentRepo.id);
+            if (!structure || !structure.fallback) return;
+            
+            const container = document.getElementById('content-container');
+            container.innerHTML = '<div class="loading">Trying common HTML files...</div>';
+            
+            // Try each fallback file
+            for (const file of structure.files) {
+                try {
+                    const response = await fetch(file.download_url);
+                    if (response.ok) {
+                        const htmlContent = await response.text();
+                        const cleanedHtml = sanitizeAndProcessHtml(htmlContent);
+                        container.innerHTML = `
+                            <div class="structure-info">
+                                <strong>✅ Found:</strong> ${file.path}
+                            </div>
+                            <div class="content-html">${cleanedHtml}</div>
+                        `;
+                        return;
+                    }
+                } catch (error) {
+                    console.log(`Failed to load ${file.path}:`, error);
+                }
+            }
+            
+            // If no files found
+            container.innerHTML = `
+                <div class="error">
+                    No HTML files found in common locations.<br><br>
+                    This could mean:
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        <li>The repository doesn't have web content</li>
+                        <li>Files are in non-standard locations</li>
+                        <li>The repository is private or doesn't exist</li>
+                    </ul>
+                    <br>
+                    <button onclick="setViewMode('explore')">Browse Repository Structure</button>
+                </div>
+            `;
+        }
+
+        // iframe mode
+        function loadIframeMode(customUrl = null) {
+            const container = document.getElementById('content-container');
+            const url = customUrl || `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+            
+            container.innerHTML = `
+                <iframe class="content-iframe" src="${url}" 
+                        onload="this.style.opacity=1" 
+                        onerror="this.style.display='none'; this.nextSibling.style.display='block'"
+                        style="opacity:0; transition: opacity 0.3s">
+                </iframe>
+                <div class="error" style="display:none">
+                    Unable to load in iframe. The site may not allow embedding or GitHub Pages may not be enabled.
+                </div>
+            `;
+        }
+
+        // HTML mode
+        async function loadHtmlMode(entryPoint) {
+            const container = document.getElementById('content-container');
+            
+            if (!entryPoint || !entryPoint.file.download_url) {
+                container.innerHTML = '<div class="error">No HTML file found to display</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(entryPoint.file.download_url);
+                const htmlContent = await response.text();
+                
+                // Clean and display HTML
+                const cleanedHtml = sanitizeAndProcessHtml(htmlContent);
+                container.innerHTML = `<div class="content-html">${cleanedHtml}</div>`;
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error loading HTML: ${error.message}</div>`;
+            }
+        }
+
+        // Explore mode
+        function loadExploreMode(structure) {
+            const container = document.getElementById('content-container');
+            
+            container.innerHTML = `
+                <div class="split-view">
+                    <div class="file-explorer">
+                        <h3 style="margin-bottom: 15px;">Repository Files</h3>
+                        <div class="file-tree" id="file-tree"></div>
+                    </div>
+                    <div style="flex: 1; padding: 20px; overflow-y: auto;">
+                        <div id="file-content">Select a file from the left to view its content</div>
+                    </div>
+                </div>
+            `;
+            
+            renderFileTree(structure);
+        }
+
+        // Render file tree
+        function renderFileTree(structure, container = null, level = 0) {
+            if (!container) {
+                container = document.getElementById('file-tree');
+                container.innerHTML = '';
+            }
+            
+            // Render files
+            if (structure.files) {
+                structure.files.forEach(file => {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = 'file-item';
+                    fileDiv.style.paddingLeft = `${level * 20 + 10}px`;
+                    fileDiv.textContent = `📄 ${file.name}`;
+                    fileDiv.onclick = () => loadFileContent(file);
+                    container.appendChild(fileDiv);
+                });
+            }
+            
+            // Render directories
+            if (structure.directories) {
+                Object.entries(structure.directories).forEach(([dirName, dirStructure]) => {
+                    const dirDiv = document.createElement('div');
+                    dirDiv.className = 'file-item';
+                    dirDiv.style.paddingLeft = `${level * 20 + 10}px`;
+                    dirDiv.style.fontWeight = 'bold';
+                    dirDiv.textContent = `📁 ${dirName}`;
+                    container.appendChild(dirDiv);
+                    
+                    renderFileTree(dirStructure, container, level + 1);
+                });
+            }
+        }
+
+        // Load file content in explore mode
+        async function loadFileContent(file) {
+            const contentDiv = document.getElementById('file-content');
+            contentDiv.innerHTML = '<div class="loading">Loading file...</div>';
+            
+            try {
+                const response = await fetch(file.download_url);
+                const content = await response.text();
+                
+                // Determine how to display based on file type
+                const extension = file.name.split('.').pop().toLowerCase();
+                
+                if (['html', 'htm'].includes(extension)) {
+                    contentDiv.innerHTML = `<iframe srcdoc="${content.replace(/"/g, '&quot;')}" style="width:100%; height:500px; border:1px solid #ddd;"></iframe>`;
+                } else if (['md', 'markdown'].includes(extension)) {
+                    contentDiv.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${content}</pre>`;
+                } else if (['js', 'css', 'json', 'xml', 'txt'].includes(extension)) {
+                    contentDiv.innerHTML = `<pre style="background:#f5f5f5; padding:15px; border-radius:5px; overflow:auto;"><code>${escapeHtml(content)}</code></pre>`;
+                } else {
+                    contentDiv.innerHTML = `<div>File type: ${extension}<br><br><pre style="white-space: pre-wrap;">${escapeHtml(content.substring(0, 1000))}${content.length > 1000 ? '...' : ''}</pre></div>`;
+                }
+                
+                // Highlight selected file
+                document.querySelectorAll('.file-item').forEach(item => item.classList.remove('selected'));
+                event.target.classList.add('selected');
+                
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="error">Error loading file: ${error.message}</div>`;
+            }
+        }
+
+        // Set view mode
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Reload content with new mode
+            if (currentRepo) {
+                loadRepositoryContent();
+            }
+        }
+
+        // Update content info
+        function updateContentInfo() {
+            const titleElement = document.getElementById('content-title');
+            const metaElement = document.getElementById('content-meta');
+            
+            if (currentRepo) {
+                titleElement.textContent = `${currentRepo.owner}/${currentRepo.name}`;
+                metaElement.textContent = `Viewing in ${currentViewMode} mode`;
+            }
+        }
+
+        // Analyze all repository structures
+        async function analyzeAllStructures() {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Analyzing...';
+            button.disabled = true;
+            
+            try {
+                await Promise.all(repositories.map(repo => analyzeRepositoryStructure(repo)));
+                console.log('All structures analyzed');
+            } catch (error) {
+                console.error('Error analyzing structures:', error);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Utility functions
+        function sanitizeAndProcessHtml(html) {
+            // Basic cleanup for display in div
+            let cleaned = html;
+            
+            // Remove script tags for security
+            cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+            
+            // Extract body content if present
+            const bodyMatch = cleaned.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+            if (bodyMatch) {
+                cleaned = bodyMatch[1];
+            }
+            
+            return cleaned;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadMarkdownContent(file) {
+            const container = document.getElementById('content-container');
+            
+            try {
+                const response = await fetch(file.download_url);
+                const content = await response.text();
+                
+                container.innerHTML = `
+                    <div class="content-html">
+                        <h3>README.md</h3>
+                        <pre style="white-space: pre-wrap; font-family: inherit; line-height: 1.6;">${content}</pre>
+                    </div>
+                `;
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error loading markdown: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeExamples();
+            
+            // Allow enter key in input fields
+            document.getElementById('repo-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addRepository();
+            });
+            
+            document.getElementById('owner-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addRepository();
+            });
+        });
+    </script>
+</body>
+</html>
