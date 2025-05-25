@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
             owner: 'NSDesign',
             name: 'InteractiveGradientGenerator',
             branch: 'main',
-            path: 'index.html'
+            path: 'gradient-generator/public/index.html'
         },
         repo3: {
             owner: 'NSDesign',
