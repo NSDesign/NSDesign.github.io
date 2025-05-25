@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
             owner: 'NSDesign',
             name: 'Drawing_App',
             branch: 'main',
-            path: 'index.html'
+            path: 'Drawing_App/index.html'
         },
         repo2: {
             owner: 'NSDesign',
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             owner: 'NSDesign',
             name: 'Interactive-Point-Blur-Image-Filter',
             branch: 'main',
-            path: 'index.html'
+            path: 'public/index.html'
         }
     };
 
