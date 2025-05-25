@@ -1,7 +1,31 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Repository Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+    <header>
+        <h1>My GitHub Projects</h1>
+        <nav id="repo-menu">
+            <ul>
+                <li><button data-repo="repo1" class="active">Project 1</button></li>
+                <li><button data-repo="repo2">Project 2</button></li>
+                <li><button data-repo="repo3">Project 3</button></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main id="content-container">
+        <div class="loading">Loading...</div>
+    </main>
+    
+    <footer>
+        <p>Created with GitHub Pages | <a href="https://github.com/yourusername">My GitHub Profile</a></p>
+    </footer>
+    
+    <script src="script.js"></script>
 </body>
 </html>
