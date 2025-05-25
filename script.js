@@ -2,19 +2,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Configuration for repositories
     const repos = {
         repo1: {
-            owner: 'NSDeisgn',
+            owner: 'NSDesign',
             name: 'Drawing_App',
             branch: 'main',
             path: 'index.html'
         },
         repo2: {
-            owner: 'NSDeisgn',
+            owner: 'NSDesign',
             name: 'InteractiveGradientGenerator',
             branch: 'main',
             path: 'index.html'
         },
         repo3: {
-            owner: 'NSDeisgn',
+            owner: 'NSDesign',
             name: 'Interactive-Point-Blur-Image-Filter',
             branch: 'main',
             path: 'index.html'
