@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Multi-Repository Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        header {
+            background: rgba(26, 32, 44, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid #4a5568;
+            position: relative;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+            color: #f7fafc;
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .version-badge {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: linear-gradient(135deg, #38b2ac 0%, #319795 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .repo-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .repo-input-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #2d3748;
+            color: #e2e8f0;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
+            background: #1a202c;
+        }
+
+        input[type="text"]::placeholder {
+            color: #a0aec0;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(66, 153, 225, 0.3);
+            background: linear-gradient(135deg, #3182ce 0%, #2b77cb 100%);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .repo-menu {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .repo-tab {
+            padding: 8px 16px;
+            background: rgba(45, 55, 72, 0.8);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            position: relative;
+            color: #cbd5e0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .repo-tab:hover {
+            background: rgba(45, 55, 72, 0.9);
+            transform: translateY(-1px);
+            border-color: #4a5568;
+        }
+
+        .repo-tab.active {
+            background: #2b77cb;
+            border-color: #4299e1;
+            color: white;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.2);
+        }
+
+        .repo-tab .remove-btn {
+            color: #fc8181;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .content-area {
+            background: #1a202c;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+            min-height: calc(100vh - 200px);
+            border: 1px solid #4a5568;
+        }
+
+        .content-header {
+            background: #2d3748;
+            padding: 15px 20px;
+            border-bottom: 1px solid #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .content-info {
+            flex: 1;
+        }
+
+        .content-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f7fafc;
+            margin-bottom: 4px;
+        }
+
+        .content-meta {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .view-mode-btn {
+            padding: 6px 12px;
+            background: #4a5568;
+            color: #cbd5e0;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-mode-btn:hover {
+            background: #2b77cb;
+            color: white;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .view-mode-btn.active {
+            background: #4299e1;
+            color: white;
+        }
+
+        #content-container {
+            min-height: calc(100vh - 280px);
+            position: relative;
+        }
+
+        .loading-enhanced {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #a0aec0;
+            font-size: 1.1rem;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #4a5568;
+            border-top: 3px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            padding: 30px;
+            text-align: center;
+            color: #fc8181;
+            background: rgba(254, 178, 178, 0.1);
+            margin: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(252, 129, 129, 0.3);
+        }
+
+        .content-iframe {
+            width: 100%;
+            height: calc(100vh - 280px);
+            border: none;
+        }
+
+        .repo-not-found {
+            padding: 40px;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        .structure-info {
+            background: rgba(56, 178, 172, 0.1);
+            color: #4fd1c7;
+            padding: 12px;
+            margin: 15px 20px;
+            border-radius: 6px;
+            border-left: 4px solid #38b2ac;
+            font-size: 14px;
+        }
+
+        .structure-info strong {
+            color: #81e6d9;
+        }
+
+        .structure-info button {
+            background: #38b2ac;
+            margin-top: 8px;
+            margin-right: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            min-width: 250px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.toast-in {
+            transform: translateX(0);
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, #38a169 0%, #48bb78 100%);
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, #e53e3e 0%, #fc8181 100%);
+        }
+
+        .toast-warning {
+            background: linear-gradient(135deg, #d69e2e 0%, #f6e05e 100%);
+            color: #1a202c;
+        }
+
+        .toast-info {
+            background: linear-gradient(135deg, #3182ce 0%, #63b3ed 100%);
+        }
+
+        /* Discovery results */
+        .discovery-results {
+            background: rgba(56, 178, 172, 0.1);
+            border-left: 4px solid #38b2ac;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .repo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .repo-card {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 6px;
+            padding: 12px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .repo-card:hover {
+            background: #374151;
+            transform: translateY(-1px);
+        }
+
+        .repo-card.priority {
+            border-left: 4px solid #38b2ac;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="version-badge">Real API v2.3</div>
+            <h1>🚀 Enhanced Multi-Repository Viewer</h1>
+            
+            <div class="repo-controls">
+                <div class="repo-input-group">
+                    <div class="input-wrapper">
+                        <input type="text" id="owner-input" placeholder="GitHub Username" value="">
+                    </div>
+                    <div class="input-wrapper">
+                        <input type="text" id="repo-input" placeholder="Repository Name (optional)" value="">
+                    </div>
+                    <button onclick="handleAddRepository()" id="add-btn">Add Repository</button>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button onclick="discoverUserRepos()" id="discover-btn">🔍 Discover Repos</button>
+                    <button onclick="showDebugInfo()" style="background: #718096;">Debug</button>
+                </div>
+            </div>
+
+            <!-- Discovery Results -->
+            <div id="discovery-results" class="discovery-results">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="color: #81e6d9;">📂 Repositories for <span id="discovery-user"></span></strong>
+                    <button onclick="hideDiscoveryResults()" style="background: none; border: none; color: #4fd1c7; font-size: 14px; cursor: pointer;">&times;</button>
+                </div>
+                <div id="discovery-content"></div>
+            </div>
+
+            <div class="repo-menu" id="repo-menu">
+                <!-- Repository tabs will be added here -->
+            </div>
+        </header>
+
+        <div class="content-area">
+            <div class="content-header">
+                <div class="content-info">
+                    <div class="content-title" id="content-title">Select a repository to view</div>
+                    <div class="content-meta" id="content-meta">Add repositories using the form above</div>
+                </div>
+                <div class="view-controls">
+                    <button class="view-mode-btn active" onclick="setViewMode('pages')" data-mode="pages">GitHub Pages</button>
+                    <button class="view-mode-btn" onclick="setViewMode('raw')" data-mode="raw">Raw Files</button>
+                    <button class="view-mode-btn" onclick="setViewMode('repo')" data-mode="repo">Repository</button>
+                </div>
+            </div>
+            
+            <div id="content-container">
+                <div class="repo-not-found">
+                    <h3>👋 Welcome to Enhanced Repository Viewer!</h3>
+                    <p>🌟 <strong>Clean:</strong> Fixed JavaScript parsing issues</p>
+                    <p>🔍 Features: User repository discovery, GitHub Pages viewing, raw file access</p>
+                    <br>
+                    <p><strong>Quick Start:</strong></p>
+                    <p>1. Enter a GitHub username and click "🔍 Discover Repos"</p>
+                    <p>2. Or enter both username and repository name to add directly</p>
+                    <p>3. Use different view modes to explore content</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            GITHUB_API: 'https://api.github.com',
+            GITHUB_RAW: 'https://raw.githubusercontent.com',
+            GITHUB_PAGES: (owner, repo) => `https://${owner}.github.io/${repo}`,
+            TIMEOUT: 8000
+        };
+
+        // Simple notification system
+        class NotificationManager {
+            static show(message, type = 'info', duration = 3000) {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => toast.classList.add('toast-in'), 10);
+                
+                setTimeout(() => {
+                    toast.classList.remove('toast-in');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, duration);
+            }
+            
+            static success(message) { return this.show(message, 'success'); }
+            static error(message) { return this.show(message, 'error'); }
+            static warning(message) { return this.show(message, 'warning'); }
+            static info(message) { return this.show(message, 'info'); }
+        }
+
+        // Simple storage system that handles localStorage failures gracefully
+        class SimpleStorage {
+            constructor() {
+                this.data = new Map();
+                this.loadFromMemory();
+            }
+            
+            set(key, value) {
+                this.data.set(key, value);
+                this.saveToMemory();
+            }
+            
+            get(key) {
+                return this.data.get(key) || null;
+            }
+            
+            loadFromMemory() {
+                try {
+                    if (typeof localStorage !== 'undefined') {
+                        const saved = localStorage.getItem('repoViewer');
+                        if (saved) {
+                            const parsed = JSON.parse(saved);
+                            this.data = new Map(Object.entries(parsed));
+                        }
+                    }
+                } catch (e) {
+                    // Silently handle localStorage failures
+                    console.log('localStorage not available - using memory storage');
+                }
+            }
+            
+            saveToMemory() {
+                try {
+                    if (typeof localStorage !== 'undefined') {
+                        const obj = Object.fromEntries(this.data.entries());
+                        localStorage.setItem('repoViewer', JSON.stringify(obj));
+                    }
+                } catch (e) {
+                    // Silently handle localStorage failures
+                }
+            }
+        }
+
+        // Simple HTTP client with multiple approaches for GitHub API
+        class SimpleHttpClient {
+            static async fetch(url, options = {}) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), CONFIG.TIMEOUT);
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal,
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'GitHub-Repository-Viewer',
+                            ...options.headers
+                        }
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error('Request timeout');
+                    }
+                    throw error;
+                }
+            }
+            
+            static async fetchViaProxy(url) {
+                // Try allorigins.win proxy which sometimes works better for GitHub API
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                
+                try {
+                    const response = await fetch(proxyUrl, {
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Proxy returned ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (!data.contents) {
+                        throw new Error('Proxy returned empty contents');
+                    }
+                    
+                    // Parse the GitHub API response from proxy
+                    return JSON.parse(data.contents);
+                } catch (error) {
+                    throw new Error(`Proxy failed: ${error.message}`);
+                }
+            }
+            
+            static async getJson(url) {
+                let lastError;
+                
+                // Method 1: Direct GitHub API call
+                try {
+                    console.log('Trying direct GitHub API call...');
+                    const response = await this.fetch(url);
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log(`✅ Direct API success: ${data.length} repositories`);
+                        return data;
+                    }
+                    lastError = new Error(`Direct API returned ${response.status}`);
+                } catch (error) {
+                    console.log('Direct API failed:', error.message);
+                    lastError = error;
+                }
+                
+                // Method 2: Try via CORS proxy
+                try {
+                    console.log('Trying via CORS proxy...');
+                    const data = await this.fetchViaProxy(url);
+                    console.log(`✅ Proxy API success: ${data.length} repositories`);
+                    return data;
+                } catch (error) {
+                    console.log('Proxy API failed:', error.message);
+                    lastError = error;
+                }
+                
+                // Method 3: Try with no-cors mode (won't return data but might work for some use cases)
+                try {
+                    console.log('Trying no-cors mode...');
+                    const response = await fetch(url, { 
+                        mode: 'no-cors',
+                        headers: {
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    // no-cors mode doesn't allow reading the response, so this won't work for JSON
+                    throw new Error('no-cors mode cannot read response data');
+                } catch (error) {
+                    console.log('no-cors mode failed:', error.message);
+                }
+                
+                throw lastError;
+            }
+            
+            static async getText(url) {
+                try {
+                    const response = await this.fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return await response.text();
+                } catch (error) {
+                    throw error;
+                }
+            }
+        }
+
+        // Global state
+        const storage = new SimpleStorage();
+        let repositories = [];
+        let currentRepo = null;
+        let currentViewMode = 'pages';
+
+        // Repository management functions
+        function initializeApp() {
+            const saved = storage.get('repositories');
+            if (saved) {
+                repositories = saved;
+                updateRepoMenu();
+            }
+            
+            NotificationManager.success('Repository viewer loaded successfully!');
+        }
+
+        async function discoverUserRepos() {
+            const owner = document.getElementById('owner-input').value.trim();
+            
+            if (!owner) {
+                NotificationManager.warning('Please enter a GitHub username first');
+                document.getElementById('owner-input').focus();
+                return;
+            }
+            
+            const button = document.getElementById('discover-btn');
+            const originalText = button.textContent;
+            button.textContent = '🔍 Discovering...';
+            button.disabled = true;
+            
+            try {
+                await showRepositorySuggestions(owner);
+                NotificationManager.success(`Repository discovery completed for ${owner}`);
+            } catch (error) {
+                console.error('Repository discovery failed:', error);
+                NotificationManager.error(`Could not discover repositories for ${owner}`);
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        async function handleAddRepository() {
+            const owner = document.getElementById('owner-input').value.trim();
+            const repo = document.getElementById('repo-input').value.trim();
+            
+            if (!owner) {
+                NotificationManager.warning('Please enter a GitHub username');
+                document.getElementById('owner-input').focus();
+                return;
+            }
+            
+            if (!repo) {
+                // If no repo specified, trigger discovery
+                NotificationManager.info('No repository specified - discovering user repositories...');
+                await discoverUserRepos();
+                return;
+            }
+            
+            await addRepositoryToList(owner, repo);
+        }
+
+        async function showRepositorySuggestions(owner) {
+            const discoveryDiv = document.getElementById('discovery-results');
+            const contentDiv = document.getElementById('discovery-content');
+            const userSpan = document.getElementById('discovery-user');
+            
+            userSpan.textContent = owner;
+            
+            try {
+                NotificationManager.info(`Fetching real repositories for ${owner}...`);
+                
+                let repos = [];
+                let apiSuccess = false;
+                
+                // Try multiple GitHub API endpoints to get real repository data
+                const endpoints = [
+                    `${CONFIG.GITHUB_API}/users/${owner}/repos?sort=updated&per_page=100&type=public`,
+                    `${CONFIG.GITHUB_API}/users/${owner}/repos?sort=updated&per_page=100`,
+                    `${CONFIG.GITHUB_API}/users/${owner}/repos?per_page=100`,
+                    `${CONFIG.GITHUB_API}/users/${owner}/repos`
+                ];
+                
+                for (const endpoint of endpoints) {
+                    try {
+                        console.log(`Trying endpoint: ${endpoint}`);
+                        repos = await SimpleHttpClient.getJson(endpoint);
+                        apiSuccess = true;
+                        console.log(`✅ Successfully fetched ${repos.length} repositories for ${owner}`);
+                        break;
+                    } catch (error) {
+                        console.log(`Failed endpoint ${endpoint}:`, error.message);
+                        continue;
+                    }
+                }
+                
+                if (!apiSuccess) {
+                    throw new Error('All GitHub API endpoints failed - likely due to CORS restrictions or user not found');
+                }
+                
+                // Filter to only public repositories and validate data
+                const publicRepos = repos.filter(repo => {
+                    return repo && repo.name && !repo.private;
+                });
+                
+                if (publicRepos.length === 0) {
+                    contentDiv.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <p style="color: #a0aec0; margin-bottom: 15px;">
+                                ✅ Successfully connected to GitHub API, but no public repositories found for "${owner}".
+                            </p>
+                            <p style="color: #cbd5e0; font-size: 14px;">
+                                This user either has no public repositories or all repositories are private.
+                            </p>
+                            <div style="margin-top: 15px;">
+                                <input type="text" placeholder="Enter a repository name if you know one" 
+                                       style="padding: 8px; border-radius: 4px; border: 1px solid #4a5568; background: #2d3748; color: #e2e8f0; width: 250px;"
+                                       onkeypress="if(event.key==='Enter') addRepositoryToList('${owner}', this.value)">
+                                <button onclick="addRepositoryToList('${owner}', document.querySelector('input[placeholder*=\"know one\"]').value)" 
+                                        style="margin-left: 8px; padding: 8px 12px; background: #38b2ac; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                    Add
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    discoveryDiv.style.display = 'block';
+                    return;
+                }
+                
+                // Sort repositories by relevance - prioritize web projects
+                const sortedRepos = publicRepos.sort((a, b) => {
+                    // First priority: repositories with GitHub Pages enabled
+                    if (a.has_pages && !b.has_pages) return -1;
+                    if (!a.has_pages && b.has_pages) return 1;
+                    
+                    // Second priority: repositories with homepages/live demos
+                    if (a.homepage && !b.homepage) return -1;
+                    if (!a.homepage && b.homepage) return 1;
+                    
+                    // Third priority: web-related languages
+                    const webLanguages = ['HTML', 'CSS', 'JavaScript', 'TypeScript', 'Vue', 'React'];
+                    const aIsWeb = webLanguages.includes(a.language);
+                    const bIsWeb = webLanguages.includes(b.language);
+                    if (aIsWeb && !bIsWeb) return -1;
+                    if (!aIsWeb && bIsWeb) return 1;
+                    
+                    // Fourth priority: star count
+                    return (b.stargazers_count || 0) - (a.stargazers_count || 0);
+                });
+                
+                // Create repository cards from real GitHub data
+                const repoCards = sortedRepos.map(repo => {
+                    const isWebProject = repo.has_pages || repo.homepage || 
+                        (repo.language && ['HTML', 'CSS', 'JavaScript', 'TypeScript', 'Vue', 'React'].includes(repo.language));
+                    
+                    const isArchived = repo.archived;
+                    const isFork = repo.fork;
+                    
+                    return `
+                        <div class="repo-card ${isWebProject ? 'priority' : ''}" 
+                             onclick="addRepositoryToList('${repo.owner.login}', '${repo.name}')"
+                             style="${isArchived ? 'opacity: 0.6;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                <strong style="color: #f7fafc; font-size: 14px;">${repo.name}</strong>
+                                <div>
+                                    ${repo.has_pages ? '<span style="background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 4px;">📄 Pages</span>' : ''}
+                                    ${repo.homepage ? '<span style="background: #3182ce; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 4px;">🔗 Live</span>' : ''}
+                                    ${isFork ? '<span style="background: #805ad5; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 4px;">🍴 Fork</span>' : ''}
+                                    ${isArchived ? '<span style="background: #6b7280; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 4px;">📦 Archived</span>' : ''}
+                                </div>
+                            </div>
+                            <p style="color: #a0aec0; font-size: 12px; line-height: 1.4; margin-bottom: 8px; min-height: 32px;">
+                                ${(repo.description || 'No description').substring(0, 120)}${(repo.description || '').length > 120 ? '...' : ''}
+                            </p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                                <span style="color: #cbd5e0;">
+                                    ${repo.language || 'Unknown'} 
+                                    ${repo.stargazers_count ? `⭐ ${repo.stargazers_count}` : ''}
+                                    ${repo.forks_count ? `🍴 ${repo.forks_count}` : ''}
+                                    • Updated ${new Date(repo.updated_at).toLocaleDateString()}
+                                </span>
+                                <span style="color: #4fd1c7; cursor: pointer;">Click to add →</span>
+                            </div>
+                            ${repo.homepage ? `
+                                <div style="margin-top: 8px;">
+                                    <a href="${repo.homepage}" target="_blank" style="color: #63b3ed; font-size: 11px; text-decoration: none;" onclick="event.stopPropagation();">🔗 ${repo.homepage}</a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                const webProjects = sortedRepos.filter(r => r.has_pages || r.homepage).length;
+                const totalSize = sortedRepos.reduce((sum, repo) => sum + (repo.size || 0), 0);
+                const languages = [...new Set(sortedRepos.map(r => r.language).filter(Boolean))];
+                
+                contentDiv.innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <div style="background: rgba(56, 178, 172, 0.1); color: #4fd1c7; padding: 12px; margin-bottom: 15px; border-radius: 6px;">
+                            <strong>📊 Real GitHub Data for ${owner}:</strong><br>
+                            • <strong>${publicRepos.length}</strong> public repositories found<br>
+                            • <strong>${webProjects}</strong> have web content (GitHub Pages or live demos)<br>
+                            • Languages: ${languages.slice(0, 5).join(', ')}${languages.length > 5 ? ` (+${languages.length - 5} more)` : ''}<br>
+                            • Total repository size: ${Math.round(totalSize / 1024)} MB<br>
+                            • Data fetched directly from GitHub API ✅
+                        </div>
+                        <div class="repo-grid">
+                            ${repoCards}
+                        </div>
+                    </div>
+                `;
+                
+                discoveryDiv.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Real repository fetch failed:', error);
+                
+                // Show clear error message instead of fake suggestions
+                contentDiv.innerHTML = `
+                    <div class="error" style="margin: 20px;">
+                        <h3>❌ Could Not Fetch Real Repositories</h3>
+                        <p><strong>Failed to get actual repository data for "${owner}" from GitHub API.</strong></p>
+                        <p style="font-size: 14px; margin: 10px 0; color: #fc8181;">Error: ${error.message}</p>
+                        
+                        <div style="background: #2d3748; padding: 15px; border-radius: 6px; margin: 15px 0; color: #e2e8f0; font-size: 13px;">
+                            <strong>Possible reasons:</strong><br>
+                            • CORS restrictions in browser environment<br>
+                            • GitHub username "${owner}" doesn't exist<br>
+                            • Network connectivity issues<br>
+                            • GitHub API rate limiting<br>
+                            • All repositories are private<br>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <p style="color: #cbd5e0; margin-bottom: 10px;">If you know a specific repository name, you can add it manually:</p>
+                            <input type="text" placeholder="Enter repository name (e.g., Drawing_App)" 
+                                   style="padding: 8px; border-radius: 4px; border: 1px solid #4a5568; background: #2d3748; color: #e2e8f0; width: 250px;"
+                                   onkeypress="if(event.key==='Enter') addRepositoryToList('${owner}', this.value)">
+                            <button onclick="addRepositoryToList('${owner}', document.querySelector('input[placeholder*=\"Drawing_App\"]').value)" 
+                                    style="margin-left: 8px; padding: 8px 12px; background: #38b2ac; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                Add Manually
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <button onclick="discoverUserRepos()" style="background: #4299e1; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">🔄 Try Again</button>
+                        </div>
+                    </div>
+                `;
+                discoveryDiv.style.display = 'block';
+            }
+        }
+
+        function hideDiscoveryResults() {
+            document.getElementById('discovery-results').style.display = 'none';
+        }
+
+        async function addRepositoryToList(owner, repo) {
+            const repoId = `${owner}/${repo}`;
+            
+            // Check if already exists
+            if (repositories.find(r => r.id === repoId)) {
+                NotificationManager.warning('Repository already added');
+                selectRepository(repoId);
+                return;
+            }
+            
+            const repoObj = {
+                id: repoId,
+                owner: owner,
+                name: repo,
+                addedAt: Date.now()
+            };
+            
+            repositories.push(repoObj);
+            storage.set('repositories', repositories);
+            updateRepoMenu();
+            selectRepository(repoId);
+            
+            // Clear inputs
+            document.getElementById('owner-input').value = '';
+            document.getElementById('repo-input').value = '';
+            
+            NotificationManager.success(`Added ${repoId} successfully`);
+        }
+
+        function updateRepoMenu() {
+            const menu = document.getElementById('repo-menu');
+            menu.innerHTML = '';
+            
+            repositories.forEach(repo => {
+                const tab = document.createElement('div');
+                tab.className = 'repo-tab';
+                tab.innerHTML = `
+                    ${repo.name}
+                    <span class="remove-btn" onclick="removeRepository('${repo.id}')" title="Remove repository">&times;</span>
+                `;
+                
+                tab.onclick = (e) => {
+                    if (e.target.classList.contains('remove-btn')) return;
+                    selectRepository(repo.id);
+                };
+                
+                menu.appendChild(tab);
+            });
+        }
+
+        function removeRepository(repoId) {
+            repositories = repositories.filter(r => r.id !== repoId);
+            storage.set('repositories', repositories);
+            
+            if (currentRepo && currentRepo.id === repoId) {
+                currentRepo = null;
+                updateContentArea();
+            }
+            
+            updateRepoMenu();
+            NotificationManager.info(`Removed ${repoId}`);
+        }
+
+        function selectRepository(repoId) {
+            const repo = repositories.find(r => r.id === repoId);
+            if (!repo) return;
+            
+            currentRepo = repo;
+            
+            // Update active tab
+            document.querySelectorAll('.repo-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent.includes(repo.name)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            hideDiscoveryResults();
+            loadRepositoryContent();
+        }
+
+        // View mode functions
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            if (currentRepo) {
+                loadRepositoryContent();
+            }
+        }
+
+        async function loadRepositoryContent() {
+            if (!currentRepo) return;
+            
+            updateContentInfo();
+            const container = document.getElementById('content-container');
+            
+            // Show loading
+            container.innerHTML = `
+                <div class="loading-enhanced">
+                    <div class="spinner"></div>
+                    <div>Loading ${currentRepo.id}...</div>
+                </div>
+            `;
+            
+            try {
+                if (currentViewMode === 'pages') {
+                    await loadGitHubPages();
+                } else if (currentViewMode === 'raw') {
+                    await loadRawFiles();
+                } else if (currentViewMode === 'repo') {
+                    loadRepositoryView();
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="error">
+                        <h3>Error Loading Repository</h3>
+                        <p>${error.message}</p>
+                        <button onclick="loadRepositoryContent()" style="margin-top: 10px;">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadGitHubPages() {
+            const container = document.getElementById('content-container');
+            const pagesUrl = CONFIG.GITHUB_PAGES(currentRepo.owner, currentRepo.name);
+            
+            container.innerHTML = `
+                <div class="structure-info">
+                    <strong>🌐 GitHub Pages Mode</strong><br>
+                    Loading ${currentRepo.id} via GitHub Pages...<br>
+                    URL: <a href="${pagesUrl}" target="_blank" style="color: #63b3ed;">${pagesUrl}</a>
+                </div>
+                <iframe class="content-iframe" src="${pagesUrl}" 
+                        onload="this.style.opacity=1; handleIframeLoad(true)" 
+                        onerror="handleIframeError()"
+                        style="opacity:0; transition: opacity 0.3s">
+                </iframe>
+                <div id="iframe-fallback" style="display:none;" class="error">
+                    <h3>GitHub Pages Not Available</h3>
+                    <p>This repository may not have GitHub Pages enabled.</p>
+                    <button onclick="setViewMode('raw')" style="margin: 5px;">📄 Try Raw Files</button>
+                    <button onclick="setViewMode('repo')" style="margin: 5px;">📂 View Repository</button>
+                    <a href="https://github.com/${currentRepo.id}" target="_blank" style="margin: 5px; padding: 8px 12px; background: #4a5568; color: white; text-decoration: none; border-radius: 4px;">🔗 View on GitHub</a>
+                </div>
+            `;
+        }
+
+        async function loadRawFiles() {
+            const container = document.getElementById('content-container');
+            
+            try {
+                // Try to find common HTML files
+                const commonFiles = [
+                    'index.html',
+                    'main.html',
+                    'home.html',
+                    `${currentRepo.name}/index.html`,
+                    `public/index.html`,
+                    `dist/index.html`,
+                    `docs/index.html`
+                ];
+                
+                let foundFile = null;
+                
+                for (const file of commonFiles) {
+                    try {
+                        const url = `${CONFIG.GITHUB_RAW}/${currentRepo.id}/main/${file}`;
+                        const response = await SimpleHttpClient.fetch(url, { method: 'HEAD' });
+                        if (response.ok) {
+                            foundFile = { path: file, url: url };
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue trying
+                    }
+                }
+                
+                if (foundFile) {
+                    const content = await SimpleHttpClient.getText(foundFile.url);
+                    container.innerHTML = `
+                        <div class="structure-info">
+                            <strong>📄 Raw File Mode</strong><br>
+                            Found and loaded: ${foundFile.path}<br>
+                            <a href="${foundFile.url}" target="_blank" style="color: #63b3ed;">View raw file</a>
+                        </div>
+                        <iframe srcdoc="${content.replace(/"/g, '&quot;')}" class="content-iframe"></iframe>
+                    `;
+                } else {
+                    // Show file browser
+                    container.innerHTML = `
+                        <div class="structure-info">
+                            <strong>📁 No HTML files found in common locations</strong><br>
+                            Try these direct links to common files:<br><br>
+                            ${commonFiles.map(file => 
+                                `<a href="${CONFIG.GITHUB_RAW}/${currentRepo.id}/main/${file}" target="_blank" style="display: block; color: #63b3ed; margin: 5px 0;">${file}</a>`
+                            ).join('')}
+                            <br>
+                            <button onclick="setViewMode('repo')" style="margin-top: 10px;">📂 Browse Repository</button>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="error">
+                        <h3>Could not load raw files</h3>
+                        <p>${error.message}</p>
+                        <button onclick="setViewMode('repo')">📂 Browse Repository</button>
+                    </div>
+                `;
+            }
+        }
+
+        function loadRepositoryView() {
+            const container = document.getElementById('content-container');
+            const repoUrl = `https://github.com/${currentRepo.id}`;
+            
+            container.innerHTML = `
+                <div class="structure-info">
+                    <strong>📂 Repository View</strong><br>
+                    Viewing ${currentRepo.id} on GitHub<br>
+                    <a href="${repoUrl}" target="_blank" style="color: #63b3ed;">Open in new tab</a>
+                </div>
+                <iframe class="content-iframe" src="${repoUrl}"></iframe>
+            `;
+        }
+
+        function updateContentInfo() {
+            const titleElement = document.getElementById('content-title');
+            const metaElement = document.getElementById('content-meta');
+            
+            if (currentRepo) {
+                titleElement.textContent = `${currentRepo.owner}/${currentRepo.name}`;
+                metaElement.textContent = `Viewing in ${currentViewMode} mode`;
+            }
+        }
+
+        function updateContentArea() {
+            const container = document.getElementById('content-container');
+            container.innerHTML = `
+                <div class="repo-not-found">
+                    <h3>👋 Welcome to Enhanced Repository Viewer!</h3>
+                    <p>🚀 Fixed: Better error handling and more reliable repository access</p>
+                    <p>🔍 Enter a GitHub username and click "🔍 Discover Repos" to get started</p>
+                </div>
+            `;
+            
+            const titleElement = document.getElementById('content-title');
+            const metaElement = document.getElementById('content-meta');
+            titleElement.textContent = 'Select a repository to view';
+            metaElement.textContent = 'Add repositories using the form above';
+        }
+
+        function handleIframeLoad(success) {
+            if (success) {
+                NotificationManager.success('Repository loaded successfully!');
+            }
+        }
+
+        function handleIframeError() {
+            const fallback = document.querySelector('#iframe-fallback');
+            const iframe = document.querySelector('.content-iframe');
+            if (fallback) fallback.style.display = 'block';
+            if (iframe) iframe.style.display = 'none';
+        }
+
+        // Debug function
+        function showDebugInfo() {
+            const container = document.getElementById('content-container');
+            
+            container.innerHTML = `
+                <div style="padding: 20px; font-family: monospace; font-size: 13px; line-height: 1.4; color: #e2e8f0;">
+                    <h3 style="color: #f7fafc; margin-bottom: 20px;">🔍 Debug Information</h3>
+                    
+                    <div style="background: #2d3748; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #4a5568;">
+                        <h4 style="color: #cbd5e0;">📊 Application Status:</h4>
+                        <strong>Version:</strong> Real API v2.3<br>
+                        <strong>Current Repository:</strong> ${currentRepo ? currentRepo.id : 'None selected'}<br>
+                        <strong>View Mode:</strong> ${currentViewMode}<br>
+                        <strong>Total Repositories:</strong> ${repositories.length}<br>
+                        <strong>Storage:</strong> ${storage.data.size} items in memory<br>
+                        <strong>Browser:</strong> ${navigator.userAgent.split(' ')[0]}<br>
+                    </div>
+                    
+                    <div style="background: #2d3748; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #4a5568;">
+                        <h4 style="color: #cbd5e0;">🔗 Repository URLs:</h4>
+                        ${currentRepo ? `
+                            <strong>GitHub Pages:</strong><br>
+                            <a href="${CONFIG.GITHUB_PAGES(currentRepo.owner, currentRepo.name)}" target="_blank" style="color: #63b3ed; word-break: break-all;">
+                                ${CONFIG.GITHUB_PAGES(currentRepo.owner, currentRepo.name)}
+                            </a><br><br>
+                            
+                            <strong>Repository:</strong><br>
+                            <a href="https://github.com/${currentRepo.id}" target="_blank" style="color: #63b3ed; word-break: break-all;">
+                                https://github.com/${currentRepo.id}
+                            </a><br><br>
+                            
+                            <strong>Raw Files (common paths):</strong><br>
+                            <a href="${CONFIG.GITHUB_RAW}/${currentRepo.id}/main/index.html" target="_blank" style="color: #63b3ed; display: block; margin: 2px 0;">index.html</a>
+                            <a href="${CONFIG.GITHUB_RAW}/${currentRepo.id}/main/${currentRepo.name}/index.html" target="_blank" style="color: #63b3ed; display: block; margin: 2px 0;">${currentRepo.name}/index.html</a>
+                            <a href="${CONFIG.GITHUB_RAW}/${currentRepo.id}/main/public/index.html" target="_blank" style="color: #63b3ed; display: block; margin: 2px 0;">public/index.html</a>
+                        ` : 'No repository selected'}
+                    </div>
+                    
+                    <div style="background: #1a365d; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #2b77cb;">
+                        <h4 style="color: #cbd5e0;">🛠️ Troubleshooting:</h4>
+                        <strong>If repositories won't load:</strong><br>
+                        1. Try different view modes (GitHub Pages, Raw Files, Repository)<br>
+                        2. Check if the repository is public<br>
+                        3. Verify GitHub Pages is enabled in repository settings<br>
+                        4. Click the direct links above to test access<br>
+                        5. Some repositories may not have web content<br><br>
+                        
+                        <strong>Common issues fixed:</strong><br>
+                        • Removed unreliable CORS proxies<br>
+                        • Simplified repository discovery<br>
+                        • Better error handling and fallbacks<br>
+                        • Fixed JavaScript parsing issues<br>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <button onclick="loadRepositoryContent()" style="background: #2b77cb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">← Back to Repository View</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Make all functions globally accessible for onclick handlers
+        window.handleAddRepository = handleAddRepository;
+        window.addRepositoryToList = addRepositoryToList;
+        window.discoverUserRepos = discoverUserRepos;
+        window.hideDiscoveryResults = hideDiscoveryResults;
+        window.removeRepository = removeRepository;
+        window.setViewMode = setViewMode;
+        window.showDebugInfo = showDebugInfo;
+        window.handleIframeLoad = handleIframeLoad;
+        window.handleIframeError = handleIframeError;
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const active = document.activeElement;
+                if (active.id === 'owner-input' || active.id === 'repo-input') {
+                    handleAddRepository();
+                }
+            }
+        });
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+            console.log('🎉 Clean Enhanced Repository Viewer loaded successfully!');
+        });
+    </script>
+</body>
+</html>
