@@ -1,0 +1,3435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Multi-Repository Viewer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        header {
+            background: rgba(26, 32, 44, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            border: 1px solid #4a5568;
+            position: relative;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+            color: #f7fafc;
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .version-badge {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: linear-gradient(135deg, #38b2ac 0%, #319795 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .repo-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .repo-input-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #4a5568;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: #2d3748;
+            color: #e2e8f0;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #63b3ed;
+            box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
+            background: #1a202c;
+        }
+
+        input[type="text"]::placeholder {
+            color: #a0aec0;
+        }
+
+        .search-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a202c;
+            border: 1px solid #4a5568;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #2d3748;
+            transition: background-color 0.2s;
+            font-size: 14px;
+            color: #cbd5e0;
+        }
+
+        .search-item:hover, .search-item.selected {
+            background: #2d3748;
+        }
+
+        .search-item:last-child {
+            border-bottom: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(66, 153, 225, 0.3);
+            background: linear-gradient(135deg, #3182ce 0%, #2b77cb 100%);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-loading {
+            position: relative;
+        }
+
+        .button-loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 16px;
+            height: 16px;
+            margin: -8px 0 0 -8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .repo-menu {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .repo-tab {
+            padding: 8px 16px;
+            background: rgba(45, 55, 72, 0.8);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            position: relative;
+            color: #cbd5e0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .repo-tab:hover {
+            background: rgba(45, 55, 72, 0.9);
+            transform: translateY(-1px);
+            border-color: #4a5568;
+        }
+
+        .repo-tab.active {
+            background: #2b77cb;
+            border-color: #4299e1;
+            color: white;
+            box-shadow: 0 4px 12px rgba(66, 153, 225, 0.2);
+        }
+
+        .repo-tab .favorite-btn {
+            color: #fbb6ce;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .repo-tab .favorite-btn.active {
+            color: #ed64a6;
+        }
+
+        .repo-tab .remove-btn {
+            color: #fc8181;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .content-area {
+            background: #1a202c;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+            min-height: calc(100vh - 200px);
+            border: 1px solid #4a5568;
+        }
+
+        .content-header {
+            background: #2d3748;
+            padding: 15px 20px;
+            border-bottom: 1px solid #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .content-info {
+            flex: 1;
+        }
+
+        .content-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f7fafc;
+            margin-bottom: 4px;
+        }
+
+        .content-meta {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .view-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .view-mode-btn {
+            padding: 6px 12px;
+            background: #4a5568;
+            color: #cbd5e0;
+            font-size: 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-mode-btn:hover {
+            background: #2b77cb;
+            color: white;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .view-mode-btn.active {
+            background: #4299e1;
+            color: white;
+        }
+
+        .performance-indicator {
+            font-size: 10px;
+            color: #81e6d9;
+            margin-left: 10px;
+        }
+
+        #content-container {
+            min-height: calc(100vh - 280px);
+            position: relative;
+        }
+
+        .loading-enhanced {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #a0aec0;
+            font-size: 1.1rem;
+            gap: 15px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #4a5568;
+            border-top: 3px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-message {
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: #4a5568;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar > div {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #63b3ed);
+            transition: width 0.3s ease;
+            border-radius: 2px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            padding: 30px;
+            text-align: center;
+            color: #fc8181;
+            background: rgba(254, 178, 178, 0.1);
+            margin: 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(252, 129, 129, 0.3);
+        }
+
+        .content-iframe {
+            width: 100%;
+            height: calc(100vh - 280px);
+            border: none;
+        }
+
+        .content-html {
+            padding: 20px;
+            max-height: calc(100vh - 280px);
+            overflow-y: auto;
+        }
+
+        .file-explorer {
+            background: #2d3748;
+            border-right: 1px solid #4a5568;
+            width: 300px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 280px);
+        }
+
+        .file-tree {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .file-item {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 2px 0;
+            transition: background-color 0.2s;
+            color: #cbd5e0;
+        }
+
+        .file-item:hover {
+            background: #4a5568;
+        }
+
+        .file-item.selected {
+            background: #4299e1;
+            color: white;
+        }
+
+        .split-view {
+            display: flex;
+            height: calc(100vh - 280px);
+        }
+
+        .repo-not-found {
+            padding: 40px;
+            text-align: center;
+            color: #a0aec0;
+        }
+
+        .structure-info {
+            background: rgba(56, 178, 172, 0.1);
+            color: #4fd1c7;
+            padding: 12px;
+            margin: 15px 20px;
+            border-radius: 6px;
+            border-left: 4px solid #38b2ac;
+            font-size: 14px;
+        }
+
+        .structure-info strong {
+            color: #81e6d9;
+        }
+
+        .structure-info button {
+            background: #38b2ac;
+            margin-top: 8px;
+            margin-right: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .structure-info button:hover {
+            background: #319795;
+            transform: none;
+        }
+
+        /* Toast Notifications */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            min-width: 250px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.toast-in {
+            transform: translateX(0);
+        }
+
+        .toast.toast-out {
+            transform: translateX(100%);
+        }
+
+        .toast-success {
+            background: linear-gradient(135deg, #38a169 0%, #48bb78 100%);
+        }
+
+        .toast-error {
+            background: linear-gradient(135deg, #e53e3e 0%, #fc8181 100%);
+        }
+
+        .toast-warning {
+            background: linear-gradient(135deg, #d69e2e 0%, #f6e05e 100%);
+            color: #1a202c;
+        }
+
+        .toast-info {
+            background: linear-gradient(135deg, #3182ce 0%, #63b3ed 100%);
+        }
+
+        /* Keyboard shortcuts help */
+        .shortcuts-help {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(26, 32, 44, 0.95);
+            color: #cbd5e0;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            border: 1px solid #4a5568;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .shortcuts-help.visible {
+            opacity: 1;
+        }
+
+        .shortcuts-help kbd {
+            background: #4a5568;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin: 0 2px;
+        }
+
+        /* Enhanced status indicators */
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-loading {
+            background: #fbbf24;
+            animation: pulse 2s infinite;
+        }
+
+        .status-success {
+            background: #10b981;
+        }
+
+        .status-error {
+            background: #ef4444;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="version-badge">Enhanced v2.0</div>
+            <h1>🚀 Enhanced Multi-Repository Viewer</h1>
+            
+            <div class="repo-controls">
+                <div class="repo-input-group">
+                    <div class="input-wrapper">
+                        <input type="text" id="owner-input" placeholder="GitHub Username" value="" autocomplete="off">
+                        <div class="search-dropdown" id="owner-dropdown"></div>
+                    </div>
+                    <div class="input-wrapper">
+                        <input type="text" id="repo-input" placeholder="Repository Name (or leave blank to discover)" value="" autocomplete="off">
+                        <div class="search-dropdown" id="repo-dropdown"></div>
+                    </div>
+                    <button onclick="discoverRepositories()" id="discover-btn">🔍 Discover Repos</button>
+                    <button onclick="addRepository()" id="add-btn">Add Repository</button>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button onclick="analyzeAllStructures()" id="analyze-btn">Analyze All</button>
+                    <button onclick="showApiKeyDialog()" style="background: #805ad5; font-size: 12px;" title="Optional: Add GitHub API key for higher rate limits">🔑 API Key</button>
+                    <button onclick="showDebugInfo()" style="background: #718096;">Debug</button>
+                    <button onclick="toggleShortcutsHelp()" style="background: #805ad5; font-size: 12px;">?</button>
+                </div>
+            </div>
+
+            <!-- API Key Dialog (initially hidden) -->
+            <div id="api-key-dialog" style="display: none; background: rgba(26, 32, 44, 0.95); padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #4a5568;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                    <div>
+                        <strong style="color: #f7fafc;">🔑 GitHub API Key (Optional)</strong><br>
+                        <small style="color: #a0aec0;">Increases rate limit from 60 to 5,000 requests/hour</small>
+                    </div>
+                    <button onclick="hideApiKeyDialog()" style="background: none; border: none; color: #fc8181; font-size: 18px; cursor: pointer; padding: 0;">&times;</button>
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="password" id="api-key-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" 
+                           style="flex: 1; padding: 8px; background: #2d3748; border: 1px solid #4a5568; border-radius: 4px; color: #e2e8f0; font-family: monospace; font-size: 12px;">
+                    <button onclick="saveApiKey()" style="background: #38a169; padding: 8px 12px; font-size: 12px;">Save</button>
+                    <button onclick="clearApiKey()" style="background: #e53e3e; padding: 8px 12px; font-size: 12px;">Clear</button>
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: #a0aec0;">
+                    <strong>How to get an API key:</strong> 
+                    <a href="https://github.com/settings/tokens" target="_blank" style="color: #63b3ed;">GitHub Settings → Developer settings → Personal access tokens → Generate new token</a><br>
+                    <strong>Required permissions:</strong> Just "public_repo" access (or no scopes for public-only access)
+                </div>
+            </div>
+
+            <!-- Repository Discovery Results -->
+            <div id="repo-discovery" style="display: none; background: rgba(56, 178, 172, 0.1); border-left: 4px solid #38b2ac; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong style="color: #81e6d9;">📂 Discovered Repositories</strong>
+                    <button onclick="hideDiscoveryResults()" style="background: none; border: none; color: #4fd1c7; font-size: 14px; cursor: pointer;">&times;</button>
+                </div>
+                <div id="repo-discovery-content"></div>
+            </div>
+
+            <div class="repo-menu" id="repo-menu">
+                <!-- Repository tabs will be added here -->
+            </div>
+        </header>
+
+        <div class="content-area">
+            <div class="content-header">
+                <div class="content-info">
+                    <div class="content-title" id="content-title">Select a repository to view</div>
+                    <div class="content-meta" id="content-meta">Add repositories using the form above</div>
+                </div>
+                <div class="view-controls">
+                    <button class="view-mode-btn active" onclick="setViewMode('auto')" data-mode="auto">Auto</button>
+                    <button class="view-mode-btn" onclick="setViewMode('iframe')" data-mode="iframe">iFrame</button>
+                    <button class="view-mode-btn" onclick="setViewMode('html')" data-mode="html">HTML</button>
+                    <button class="view-mode-btn" onclick="setViewMode('explore')" data-mode="explore">Explore</button>
+                    <div class="performance-indicator" id="perf-indicator"></div>
+                    <div class="performance-indicator" id="rate-limit-indicator"></div>
+                </div>
+            </div>
+            
+            <div id="content-container">
+                <div class="repo-not-found">
+                    <h3>👋 Welcome to Enhanced Repository Viewer!</h3>
+                    <p>🔍 <strong>New:</strong> Auto-discover repositories by username!</p>
+                    <p>🌿 Features: Branch discovery, directory exploration, smart entry points</p>
+                    <p>🔑 Optional GitHub API key support for higher rate limits</p>
+                    <br>
+                    <p><strong>Quick Start:</strong></p>
+                    <p>1. Enter a GitHub username and click "🔍 Discover Repos"</p>
+                    <p>2. Or enter both username and repo name to add directly</p>
+                    <p>3. Press <kbd>Ctrl+K</kbd> to focus search, <kbd>?</kbd> for help</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="shortcuts-help" id="shortcuts-help">
+        <strong>⌨️ Keyboard Shortcuts:</strong><br>
+        <kbd>Ctrl</kbd>+<kbd>K</kbd> Focus search<br>
+        <kbd>Ctrl</kbd>+<kbd>R</kbd> Refresh current<br>
+        <kbd>Ctrl</kbd>+<kbd>D</kbd> Debug info<br>
+        <kbd>Esc</kbd> Close modals<br>
+        <kbd>?</kbd> Toggle this help
+    </div>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            API: {
+                GITHUB_BASE: 'https://api.github.com',
+                RAW_BASE: 'https://raw.githubusercontent.com',
+                CORS_PROXIES: [
+                    'https://api.allorigins.win/get?url=',
+                    'https://cors-anywhere.herokuapp.com/'
+                ],
+                TIMEOUT: 10000
+            },
+            UI: {
+                TOAST_DURATION: 3000,
+                CACHE_DURATION: 5 * 60 * 1000
+            }
+        };
+
+        // Storage abstraction
+        class Storage {
+            constructor() {
+                this.fallbackData = new Map();
+                this.isLocalStorageAvailable = this.checkLocalStorage();
+            }
+            
+            checkLocalStorage() {
+                try {
+                    if (typeof localStorage === 'undefined') return false;
+                    localStorage.setItem('test', 'test');
+                    localStorage.removeItem('test');
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+            
+            setItem(key, value) {
+                try {
+                    if (this.isLocalStorageAvailable) {
+                        localStorage.setItem(key, JSON.stringify(value));
+                    } else {
+                        this.fallbackData.set(key, value);
+                    }
+                } catch (e) {
+                    this.fallbackData.set(key, value);
+                }
+            }
+            
+            getItem(key) {
+                try {
+                    if (this.isLocalStorageAvailable) {
+                        const item = localStorage.getItem(key);
+                        return item ? JSON.parse(item) : null;
+                    } else {
+                        return this.fallbackData.get(key) || null;
+                    }
+                } catch (e) {
+                    return this.fallbackData.get(key) || null;
+                }
+            }
+        }
+
+        // Notification system
+        class NotificationManager {
+            static show(message, type = 'info', duration = CONFIG.UI.TOAST_DURATION) {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type}`;
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => toast.classList.add('toast-in'), 10);
+                
+                setTimeout(() => {
+                    toast.classList.remove('toast-in');
+                    toast.classList.add('toast-out');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, duration);
+                
+                return toast;
+            }
+            
+            static success(message) { return this.show(message, 'success'); }
+            static error(message) { return this.show(message, 'error'); }
+            static warning(message) { return this.show(message, 'warning'); }
+            static info(message) { return this.show(message, 'info'); }
+        }
+
+        // Error handler
+        class ErrorHandler {
+            static handle(error, context = '') {
+                console.error(`❌ Error in ${context}:`, error);
+                const userMessage = this.getUserFriendlyMessage(error);
+                NotificationManager.error(userMessage);
+                return userMessage;
+            }
+            
+            static getUserFriendlyMessage(error) {
+                const message = error.message || error.toString();
+                
+                if (message.toLowerCase().includes('failed to fetch')) {
+                    return 'Network connection issue. Please check your internet connection.';
+                }
+                if (message.includes('404')) {
+                    return 'Repository not found. Please check the username and repository name.';
+                }
+                if (message.includes('403')) {
+                    return 'Access denied. This repository might be private.';
+                }
+                
+                return 'An unexpected error occurred. Please try again.';
+            }
+        }
+
+        // Cache manager
+        class CacheManager {
+            constructor() {
+                this.cache = new Map();
+                this.stats = { hits: 0, misses: 0 };
+            }
+            
+            get(key) {
+                const cached = this.cache.get(key);
+                if (cached && Date.now() - cached.timestamp < CONFIG.UI.CACHE_DURATION) {
+                    this.stats.hits++;
+                    return cached.data;
+                }
+                
+                this.stats.misses++;
+                if (cached) this.cache.delete(key);
+                return null;
+            }
+            
+            set(key, data) {
+                this.cache.set(key, { data: data, timestamp: Date.now() });
+            }
+            
+            clear() {
+                this.cache.clear();
+                this.stats = { hits: 0, misses: 0 };
+            }
+            
+            getStats() {
+                const total = this.stats.hits + this.stats.misses;
+                return {
+                    ...this.stats,
+                    total,
+                    hitRate: total > 0 ? (this.stats.hits / total * 100).toFixed(1) + '%' : '0%',
+                    size: this.cache.size
+                };
+            }
+        }
+
+        // Enhanced HTTP client with API key support and rate limit handling
+        class HttpClient {
+            constructor() {
+                this.cache = new CacheManager();
+                this.apiKey = null;
+                this.rateLimitInfo = {
+                    remaining: 60,
+                    limit: 60,
+                    reset: Date.now() + 3600000
+                };
+                this.loadApiKey();
+            }
+            
+            loadApiKey() {
+                try {
+                    this.apiKey = storage.getItem('github_api_key');
+                    if (this.apiKey) {
+                        console.log('🔑 GitHub API key loaded from storage');
+                        this.updateRateLimitDisplay();
+                    }
+                } catch (error) {
+                    console.warn('Failed to load API key:', error);
+                }
+            }
+            
+            setApiKey(key) {
+                this.apiKey = key;
+                if (key) {
+                    storage.setItem('github_api_key', key);
+                    console.log('🔑 GitHub API key saved');
+                } else {
+                    storage.removeItem('github_api_key');
+                    console.log('🔑 GitHub API key removed');
+                }
+                this.updateRateLimitDisplay();
+            }
+            
+            updateRateLimitDisplay() {
+                const indicator = document.getElementById('rate-limit-indicator');
+                if (indicator) {
+                    const { remaining, limit } = this.rateLimitInfo;
+                    const percentage = (remaining / limit) * 100;
+                    const color = percentage > 50 ? '#10b981' : percentage > 20 ? '#f59e0b' : '#ef4444';
+                    
+                    indicator.innerHTML = `
+                        <span style="color: ${color};">
+                            🌐 ${remaining}/${limit} API calls
+                            ${this.apiKey ? '🔑' : '🔓'}
+                        </span>
+                    `;
+                }
+            }
+            
+            async fetch(url, options = {}) {
+                const cacheKey = url;
+                const cached = this.cache.get(cacheKey);
+                if (cached) {
+                    console.log(`🎯 Cache hit: ${url}`);
+                    return cached;
+                }
+                
+                console.log(`🌐 Fetching: ${url}`);
+                
+                // Check rate limit before making request
+                if (this.rateLimitInfo.remaining <= 0 && Date.now() < this.rateLimitInfo.reset) {
+                    const resetTime = new Date(this.rateLimitInfo.reset).toLocaleTimeString();
+                    throw new Error(`GitHub API rate limit exceeded. Resets at ${resetTime}. ${this.apiKey ? 'Try refreshing your API key.' : 'Consider adding an API key for higher limits.'}`);
+                }
+                
+                // Try multiple methods in order
+                const methods = [
+                    () => this.directFetch(url, options),
+                    () => this.corsProxyFetch(url, options, 0),
+                    () => this.corsProxyFetch(url, options, 1)
+                ];
+                
+                let lastError;
+                
+                for (let i = 0; i < methods.length; i++) {
+                    try {
+                        console.log(`🔄 Trying method ${i + 1}/${methods.length}`);
+                        const response = await methods[i]();
+                        
+                        if (response && response.ok) {
+                            console.log(`✅ Success with method ${i + 1}`);
+                            
+                            // Update rate limit info from headers if available
+                            this.updateRateLimitFromHeaders(response);
+                            
+                            this.cache.set(cacheKey, response);
+                            return response;
+                        } else {
+                            console.log(`❌ Method ${i + 1} failed: HTTP ${response?.status || 'unknown'}`);
+                            
+                            // Handle rate limit responses
+                            if (response?.status === 403) {
+                                this.handleRateLimitResponse(response);
+                            }
+                            
+                            lastError = new Error(`HTTP ${response?.status || 'unknown'}`);
+                        }
+                    } catch (error) {
+                        console.log(`❌ Method ${i + 1} error:`, error.message);
+                        lastError = error;
+                        continue;
+                    }
+                }
+                
+                console.log(`💥 All methods failed for: ${url}`);
+                throw lastError || new Error('All fetch methods failed');
+            }
+            
+            async directFetch(url, options) {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), CONFIG.API.TIMEOUT);
+                
+                const headers = {
+                    'Accept': 'application/vnd.github.v3+json',
+                    'User-Agent': 'Enhanced-Repository-Viewer',
+                    ...options.headers
+                };
+                
+                // Add API key if available
+                if (this.apiKey && url.includes('api.github.com')) {
+                    headers['Authorization'] = `token ${this.apiKey}`;
+                }
+                
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal,
+                        mode: 'cors',
+                        headers: headers
+                    });
+                    clearTimeout(timeoutId);
+                    return response;
+                } catch (error) {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        throw new Error('Request timeout');
+                    }
+                    throw error;
+                }
+            }
+            
+            updateRateLimitFromHeaders(response) {
+                try {
+                    const remaining = response.headers.get('X-RateLimit-Remaining');
+                    const limit = response.headers.get('X-RateLimit-Limit');
+                    const reset = response.headers.get('X-RateLimit-Reset');
+                    
+                    if (remaining !== null) {
+                        this.rateLimitInfo.remaining = parseInt(remaining);
+                        this.rateLimitInfo.limit = parseInt(limit) || this.rateLimitInfo.limit;
+                        this.rateLimitInfo.reset = parseInt(reset) * 1000 || this.rateLimitInfo.reset;
+                        
+                        console.log(`📊 Rate limit: ${this.rateLimitInfo.remaining}/${this.rateLimitInfo.limit}`);
+                        this.updateRateLimitDisplay();
+                    }
+                } catch (error) {
+                    // Ignore header parsing errors
+                }
+            }
+            
+            handleRateLimitResponse(response) {
+                try {
+                    const resetHeader = response.headers.get('X-RateLimit-Reset');
+                    if (resetHeader) {
+                        this.rateLimitInfo.reset = parseInt(resetHeader) * 1000;
+                        this.rateLimitInfo.remaining = 0;
+                        this.updateRateLimitDisplay();
+                    }
+                } catch (error) {
+                    // Ignore header parsing errors
+                }
+            }
+            
+            async corsProxyFetch(url, options, proxyIndex = 0) {
+                const proxies = [
+                    'https://api.allorigins.win/get?url=',
+                    'https://cors-anywhere.herokuapp.com/'
+                ];
+                
+                const proxy = proxies[proxyIndex];
+                if (!proxy) throw new Error('No proxy available');
+                
+                const proxyUrl = proxy + encodeURIComponent(url);
+                
+                try {
+                    const response = await this.directFetch(proxyUrl, {
+                        ...options,
+                        headers: undefined // Don't pass GitHub headers to proxy
+                    });
+                    
+                    if (proxy.includes('allorigins')) {
+                        const data = await response.json();
+                        
+                        // Check if the proxy request was successful
+                        if (!data.contents) {
+                            throw new Error('Proxy returned empty contents');
+                        }
+                        
+                        // Parse the contents based on expected format
+                        let parsedContents;
+                        try {
+                            parsedContents = JSON.parse(data.contents);
+                        } catch (e) {
+                            // If it's not JSON, treat as text
+                            parsedContents = data.contents;
+                        }
+                        
+                        return {
+                            ok: true,
+                            status: 200,
+                            json: () => Promise.resolve(parsedContents),
+                            text: () => Promise.resolve(typeof parsedContents === 'string' ? parsedContents : JSON.stringify(parsedContents)),
+                            headers: {
+                                get: () => null // Proxy doesn't preserve headers
+                            }
+                        };
+                    }
+                    
+                    return response;
+                } catch (error) {
+                    throw new Error(`Proxy ${proxyIndex + 1} failed: ${error.message}`);
+                }
+            }
+        }
+
+        // Loading manager
+        class LoadingManager {
+            static show(container, message, progress = null) {
+                const loader = document.createElement('div');
+                loader.className = 'loading-enhanced';
+                loader.innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-message">${message}</div>
+                    ${progress !== null ? `
+                        <div class="progress-bar">
+                            <div style="width:${progress}%"></div>
+                        </div>
+                    ` : ''}
+                `;
+                container.innerHTML = '';
+                container.appendChild(loader);
+                return loader;
+            }
+            
+            static updateProgress(container, progress, message = null) {
+                const progressBar = container.querySelector('.progress-bar > div');
+                const messageEl = container.querySelector('.loading-message');
+                
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                }
+                
+                if (message && messageEl) {
+                    messageEl.textContent = message;
+                }
+            }
+        }
+
+        // Global state
+        const storage = new Storage();
+        const httpClient = new HttpClient();
+        let repositories = [];
+        let currentRepo = null;
+        let currentViewMode = 'auto';
+        let repoStructures = new Map();
+        let favorites = new Set();
+        let searchHistory = {
+            owners: new Set(),
+            repos: new Set()
+        };
+
+        // File patterns
+        const FILE_PATTERNS = {
+            entry_files: [
+                'index.html', 'public/index.html', 'dist/index.html', 'build/index.html',
+                '_site/index.html', 'docs/index.html', 'web/index.html', 'src/index.html', 'app/index.html'
+            ]
+        };
+
+        // Utility functions
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Search history functions
+        function loadSearchHistory() {
+            try {
+                const saved = storage.getItem('repoViewerHistory');
+                if (saved) {
+                    searchHistory.owners = new Set(saved.owners || []);
+                    searchHistory.repos = new Set(saved.repos || []);
+                }
+                
+                const savedFavorites = storage.getItem('repoViewerFavorites');
+                if (savedFavorites) {
+                    favorites = new Set(savedFavorites);
+                }
+            } catch (error) {
+                console.log('Could not load search history:', error);
+            }
+        }
+
+        function saveSearchHistory() {
+            try {
+                const toSave = {
+                    owners: Array.from(searchHistory.owners),
+                    repos: Array.from(searchHistory.repos)
+                };
+                storage.setItem('repoViewerHistory', toSave);
+                storage.setItem('repoViewerFavorites', Array.from(favorites));
+            } catch (error) {
+                console.log('Could not save search history:', error);
+            }
+        }
+
+        // Autocomplete functions
+        const debouncedShowAutocomplete = debounce(showAutocomplete, 300);
+
+        function setupAutocomplete() {
+            const ownerInput = document.getElementById('owner-input');
+            const repoInput = document.getElementById('repo-input');
+            const ownerDropdown = document.getElementById('owner-dropdown');
+            const repoDropdown = document.getElementById('repo-dropdown');
+
+            ownerInput.addEventListener('input', (e) => {
+                debouncedShowAutocomplete(e.target.value, searchHistory.owners, ownerDropdown, (value) => {
+                    ownerInput.value = value;
+                    hideDropdown(ownerDropdown);
+                    repoInput.focus();
+                });
+            });
+
+            repoInput.addEventListener('input', (e) => {
+                debouncedShowAutocomplete(e.target.value, searchHistory.repos, repoDropdown, (value) => {
+                    repoInput.value = value;
+                    hideDropdown(repoDropdown);
+                });
+            });
+
+            // Event handlers for keyboard navigation
+            [ownerInput, repoInput].forEach(input => {
+                input.addEventListener('keydown', (e) => {
+                    const dropdown = input.id === 'owner-input' ? ownerDropdown : repoDropdown;
+                    
+                    if (e.key === 'Enter' && dropdown.style.display === 'none') {
+                        if (input.id === 'owner-input') {
+                            repoInput.focus();
+                        } else {
+                            addRepository();
+                        }
+                    } else {
+                        handleKeyboardNavigation(e, dropdown);
+                    }
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.input-wrapper')) {
+                    hideDropdown(ownerDropdown);
+                    hideDropdown(repoDropdown);
+                }
+            });
+        }
+
+        function showAutocomplete(query, items, dropdown, onSelect) {
+            const filteredItems = Array.from(items).filter(item => 
+                item.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 8);
+
+            if (filteredItems.length === 0) {
+                hideDropdown(dropdown);
+                return;
+            }
+
+            dropdown.innerHTML = '';
+            filteredItems.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'search-item';
+                div.textContent = item;
+                div.onclick = () => onSelect(item);
+                
+                if (index === 0) {
+                    div.classList.add('selected');
+                }
+                
+                dropdown.appendChild(div);
+            });
+
+            dropdown.style.display = 'block';
+        }
+
+        function hideDropdown(dropdown) {
+            dropdown.style.display = 'none';
+        }
+
+        function handleKeyboardNavigation(e, dropdown) {
+            if (dropdown.style.display === 'none') return;
+
+            const items = dropdown.querySelectorAll('.search-item');
+            let selectedIndex = Array.from(items).findIndex(item => item.classList.contains('selected'));
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (selectedIndex < items.length - 1) {
+                    if (selectedIndex >= 0) items[selectedIndex].classList.remove('selected');
+                    items[selectedIndex + 1].classList.add('selected');
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (selectedIndex > 0) {
+                    items[selectedIndex].classList.remove('selected');
+                    items[selectedIndex - 1].classList.add('selected');
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0) {
+                    items[selectedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                hideDropdown(dropdown);
+            }
+        }
+
+        // Repository discovery functions
+        async function discoverRepositories() {
+            const owner = document.getElementById('owner-input').value.trim();
+            
+            if (!owner) {
+                NotificationManager.warning('Please enter a GitHub username first');
+                document.getElementById('owner-input').focus();
+                return;
+            }
+            
+            const button = document.getElementById('discover-btn');
+            const originalText = button.textContent;
+            button.textContent = '🔍 Discovering...';
+            button.disabled = true;
+            
+            try {
+                console.log(`🔍 Discovering repositories for user: ${owner}`);
+                NotificationManager.info(`Discovering repositories for ${owner}...`);
+                
+                // Fetch user's public repositories
+                const reposUrl = `${CONFIG.API.GITHUB_BASE}/users/${owner}/repos?sort=updated&per_page=100`;
+                const response = await httpClient.fetch(reposUrl);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`User '${owner}' not found on GitHub`);
+                    }
+                    if (response.status === 403) {
+                        throw new Error('GitHub API rate limit exceeded. Try adding an API key for higher limits.');
+                    }
+                    throw new Error(`GitHub API returned ${response.status}`);
+                }
+                
+                const repos = await response.json();
+                console.log(`📋 Found ${repos.length} repositories for ${owner}`);
+                
+                // Also try to get user info for better display
+                let userInfo = null;
+                try {
+                    const userUrl = `${CONFIG.API.GITHUB_BASE}/users/${owner}`;
+                    const userResponse = await httpClient.fetch(userUrl);
+                    if (userResponse.ok) {
+                        userInfo = await userResponse.json();
+                    }
+                } catch (error) {
+                    console.log('Could not fetch user info:', error);
+                }
+                
+                displayDiscoveredRepositories(owner, repos, userInfo);
+                NotificationManager.success(`Found ${repos.length} repositories for ${owner}`);
+                
+            } catch (error) {
+                console.error('Repository discovery failed:', error);
+                ErrorHandler.handle(error, 'Repository discovery');
+                hideDiscoveryResults();
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        function displayDiscoveredRepositories(owner, repos, userInfo) {
+            const discoveryPanel = document.getElementById('repo-discovery');
+            const content = document.getElementById('repo-discovery-content');
+            
+            if (repos.length === 0) {
+                content.innerHTML = `
+                    <div style="text-align: center; color: #a0aec0; padding: 20px;">
+                        <p>No public repositories found for ${owner}</p>
+                    </div>
+                `;
+                discoveryPanel.style.display = 'block';
+                return;
+            }
+            
+            // Filter and sort repositories
+            const publicRepos = repos.filter(repo => !repo.private);
+            const sortedRepos = publicRepos.sort((a, b) => {
+                // Prioritize repos with GitHub Pages or web content
+                const aHasPages = a.has_pages || a.homepage;
+                const bHasPages = b.has_pages || b.homepage;
+                if (aHasPages && !bHasPages) return -1;
+                if (!aHasPages && bHasPages) return 1;
+                
+                // Then by stars
+                return (b.stargazers_count || 0) - (a.stargazers_count || 0);
+            });
+            
+            // Create user info header if available
+            let userHeader = '';
+            if (userInfo) {
+                userHeader = `
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #4a5568;">
+                        ${userInfo.avatar_url ? `<img src="${userInfo.avatar_url}" style="width: 40px; height: 40px; border-radius: 50%;">` : ''}
+                        <div>
+                            <strong style="color: #f7fafc;">${userInfo.name || owner}</strong> 
+                            ${userInfo.bio ? `<br><small style="color: #a0aec0;">${userInfo.bio}</small>` : ''}
+                            <br><small style="color: #4fd1c7;">${userInfo.public_repos || repos.length} public repositories</small>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Group repositories by type/category
+            const webRepos = sortedRepos.filter(repo => 
+                repo.has_pages || 
+                repo.homepage || 
+                (repo.language && ['HTML', 'CSS', 'JavaScript', 'TypeScript'].includes(repo.language)) ||
+                repo.topics?.some(topic => ['website', 'web', 'frontend', 'react', 'vue', 'angular'].includes(topic.toLowerCase()))
+            );
+            
+            const otherRepos = sortedRepos.filter(repo => !webRepos.includes(repo));
+            
+            let repoHtml = userHeader;
+            
+            // Show web repositories first
+            if (webRepos.length > 0) {
+                repoHtml += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="color: #81e6d9; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            🌐 Web Projects (${webRepos.length})
+                            <button onclick="addMultipleRepositories('${owner}', [${webRepos.map(r => `'${r.name}'`).join(',')}])" 
+                                    style="background: #38a169; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                                Add All Web Repos
+                            </button>
+                        </h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;">
+                            ${webRepos.slice(0, 12).map(repo => createRepoCard(owner, repo, true)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Show other repositories
+            if (otherRepos.length > 0) {
+                repoHtml += `
+                    <div>
+                        <h4 style="color: #a0aec0; margin-bottom: 10px;">📁 Other Repositories (${otherRepos.length})</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px;">
+                            ${otherRepos.slice(0, 8).map(repo => createRepoCard(owner, repo, false)).join('')}
+                        </div>
+                        ${otherRepos.length > 8 ? `<p style="margin-top: 10px; color: #a0aec0; font-size: 12px;">... and ${otherRepos.length - 8} more repositories</p>` : ''}
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = repoHtml;
+            discoveryPanel.style.display = 'block';
+            discoveryPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function createRepoCard(owner, repo, isWebProject) {
+            const language = repo.language || 'Unknown';
+            const description = repo.description || 'No description';
+            const stars = repo.stargazers_count || 0;
+            const updated = new Date(repo.updated_at).toLocaleDateString();
+            
+            const languageColors = {
+                'JavaScript': '#f7df1e',
+                'TypeScript': '#3178c6',
+                'HTML': '#e34c26',
+                'CSS': '#1572b6',
+                'Python': '#3776ab',
+                'Java': '#ed8b00',
+                'C++': '#00599c',
+                'C': '#a8b9cc',
+                'Go': '#00add8',
+                'Rust': '#000000',
+                'PHP': '#777bb4'
+            };
+            
+            const languageColor = languageColors[language] || '#6b7280';
+            
+            return `
+                <div style="background: #2d3748; border: 1px solid #4a5568; border-radius: 6px; padding: 12px; ${isWebProject ? 'border-left: 4px solid #38b2ac;' : ''}">
+                    <div style="display: flex; justify-content: between; align-items: flex-start; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <strong style="color: #f7fafc; font-size: 14px;">${repo.name}</strong>
+                            ${repo.has_pages ? '<span style="margin-left: 8px; background: #38a169; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">📄 Pages</span>' : ''}
+                            ${repo.homepage ? '<span style="margin-left: 4px; background: #3182ce; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">🔗 Live</span>' : ''}
+                        </div>
+                        <button onclick="addRepositoryToList('${owner}', '${repo.name}')" 
+                                style="background: #4299e1; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">
+                            Add
+                        </button>
+                    </div>
+                    
+                    <p style="color: #a0aec0; font-size: 12px; line-height: 1.4; margin-bottom: 8px; height: 32px; overflow: hidden;">
+                        ${description.length > 80 ? description.substring(0, 80) + '...' : description}
+                    </p>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="display: flex; align-items: center; gap: 4px;">
+                                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${languageColor};"></span>
+                                ${language}
+                            </span>
+                            ${stars > 0 ? `<span style="color: #fbbf24;">⭐ ${stars}</span>` : ''}
+                        </div>
+                        <span style="color: #6b7280;">Updated ${updated}</span>
+                    </div>
+                    
+                    ${repo.homepage ? `
+                        <div style="margin-top: 8px;">
+                            <a href="${repo.homepage}" target="_blank" style="color: #63b3ed; font-size: 11px; text-decoration: none;">🔗 ${repo.homepage}</a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Add multiple repositories at once
+        async function addMultipleRepositories(owner, repoNames) {
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = 'Adding...';
+            button.disabled = true;
+            
+            try {
+                let addedCount = 0;
+                for (const repoName of repoNames) {
+                    // Check if already exists
+                    const repoId = `${owner}/${repoName}`;
+                    if (!repositories.find(r => r.id === repoId)) {
+                        await addRepositoryToList(owner, repoName);
+                        addedCount++;
+                    }
+                }
+                
+                NotificationManager.success(`Added ${addedCount} repositories successfully`);
+                
+                // Optionally hide discovery results after adding
+                // hideDiscoveryResults();
+                
+            } catch (error) {
+                ErrorHandler.handle(error, 'Adding multiple repositories');
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        function hideDiscoveryResults() {
+            document.getElementById('repo-discovery').style.display = 'none';
+        }
+
+        // API Key management functions
+        function showApiKeyDialog() {
+            const dialog = document.getElementById('api-key-dialog');
+            const input = document.getElementById('api-key-input');
+            
+            dialog.style.display = 'block';
+            
+            // Show current API key status
+            if (httpClient.apiKey) {
+                input.placeholder = 'API key is set (hidden for security)';
+            } else {
+                input.placeholder = 'ghp_xxxxxxxxxxxxxxxxxxxx';
+            }
+            
+            input.focus();
+        }
+
+        function hideApiKeyDialog() {
+            document.getElementById('api-key-dialog').style.display = 'none';
+            document.getElementById('api-key-input').value = '';
+        }
+
+        function saveApiKey() {
+            const input = document.getElementById('api-key-input');
+            const apiKey = input.value.trim();
+            
+            if (!apiKey) {
+                NotificationManager.warning('Please enter an API key');
+                return;
+            }
+            
+            // Basic validation
+            if (!apiKey.startsWith('ghp_') && !apiKey.startsWith('github_pat_')) {
+                NotificationManager.warning('API key should start with "ghp_" or "github_pat_"');
+                return;
+            }
+            
+            httpClient.setApiKey(apiKey);
+            hideApiKeyDialog();
+            NotificationManager.success('API key saved! Rate limit increased to 5,000/hour.');
+        }
+
+        function clearApiKey() {
+            httpClient.setApiKey(null);
+            hideApiKeyDialog();
+            NotificationManager.info('API key cleared. Using unauthenticated requests (60/hour limit).');
+        }
+        // Repository management functions
+        function initializeExamples() {
+            // Don't auto-add example repository anymore - let users discover
+            // addRepositoryToList('NSDesign', 'Drawing_App');
+            
+            if (searchHistory.owners.size === 0) {
+                ['microsoft', 'facebook', 'google', 'apple', 'NSDesign', 'vercel', 'netlify', 'github'].forEach(owner => {
+                    searchHistory.owners.add(owner);
+                });
+            }
+            
+            if (searchHistory.repos.size === 0) {
+                ['Drawing_App', 'react', 'vue', 'angular', 'next.js', 'vscode', 'typescript', 'bootstrap', 'jquery', 'webpack'].forEach(repo => {
+                    searchHistory.repos.add(repo);
+                });
+            }
+            
+            saveSearchHistory();
+            NotificationManager.success('Enhanced repository viewer loaded! Try discovering repositories by username.');
+        }
+
+        async function addRepository() {
+            const owner = document.getElementById('owner-input').value.trim();
+            const repo = document.getElementById('repo-input').value.trim();
+            
+            if (!owner) {
+                NotificationManager.warning('Please enter a GitHub username');
+                document.getElementById('owner-input').focus();
+                return;
+            }
+            
+            if (!repo) {
+                // If no repo specified, trigger discovery
+                NotificationManager.info('No repository specified - discovering all repositories...');
+                await discoverRepositories();
+                return;
+            }
+            
+            const repoId = `${owner}/${repo}`;
+            if (repositories.find(r => r.id === repoId)) {
+                NotificationManager.warning('Repository already added');
+                return;
+            }
+            
+            searchHistory.owners.add(owner);
+            searchHistory.repos.add(repo);
+            saveSearchHistory();
+            
+            try {
+                await addRepositoryToList(owner, repo);
+                NotificationManager.success(`Added ${repoId} successfully`);
+                
+                document.getElementById('owner-input').value = '';
+                document.getElementById('repo-input').value = '';
+                
+                hideDropdown(document.getElementById('owner-dropdown'));
+                hideDropdown(document.getElementById('repo-dropdown'));
+                
+            } catch (error) {
+                ErrorHandler.handle(error, 'addRepository');
+            }
+        }
+
+        async function addRepositoryToList(owner, repo) {
+            const repoObj = {
+                id: `${owner}/${repo}`,
+                owner: owner,
+                name: repo,
+                structure: null,
+                addedAt: Date.now()
+            };
+            
+            repositories.push(repoObj);
+            updateRepoMenu();
+            
+            await analyzeRepositoryStructure(repoObj);
+        }
+
+        function updateRepoMenu() {
+            const menu = document.getElementById('repo-menu');
+            menu.innerHTML = '';
+            
+            repositories.forEach(repo => {
+                const tab = document.createElement('div');
+                tab.className = 'repo-tab';
+                
+                const isFavorite = favorites.has(repo.id);
+                
+                tab.innerHTML = `
+                    <span class="status-indicator ${getRepoStatus(repo)}"></span>
+                    <span class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${repo.id}')" title="Toggle favorite">★</span>
+                    ${repo.name}
+                    <span class="remove-btn" onclick="removeRepository('${repo.id}')" title="Remove repository">&times;</span>
+                `;
+                
+                tab.onclick = (e) => {
+                    if (e.target.classList.contains('remove-btn') || e.target.classList.contains('favorite-btn')) return;
+                    selectRepository(repo.id);
+                };
+                
+                menu.appendChild(tab);
+            });
+        }
+
+        function getRepoStatus(repo) {
+            if (!repo.structure) return 'status-loading';
+            if (repo.structure.error) return 'status-error';
+            return 'status-success';
+        }
+
+        function toggleFavorite(repoId) {
+            if (favorites.has(repoId)) {
+                favorites.delete(repoId);
+                NotificationManager.info('Removed from favorites');
+            } else {
+                favorites.add(repoId);
+                NotificationManager.success('Added to favorites');
+            }
+            saveSearchHistory();
+            updateRepoMenu();
+        }
+
+        function removeRepository(repoId) {
+            repositories = repositories.filter(r => r.id !== repoId);
+            favorites.delete(repoId);
+            
+            if (currentRepo && currentRepo.id === repoId) {
+                currentRepo = null;
+                updateContentArea();
+            }
+            
+            updateRepoMenu();
+            saveSearchHistory();
+            NotificationManager.info(`Removed ${repoId}`);
+        }
+
+        function selectRepository(repoId) {
+            const repo = repositories.find(r => r.id === repoId);
+            if (!repo) return;
+            
+            currentRepo = repo;
+            
+            document.querySelectorAll('.repo-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.textContent.includes(repo.name)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            loadRepositoryContent();
+        }
+
+        // Enhanced repository analysis with branch and directory discovery
+        async function analyzeRepositoryStructure(repo) {
+            try {
+                console.log(`🔍 Starting comprehensive analysis for ${repo.id}`);
+                NotificationManager.info(`Analyzing ${repo.id} - discovering branches and directories...`);
+                
+                // Step 1: Discover available branches
+                const branches = await discoverBranches(repo);
+                console.log(`🌿 Found ${branches.length} branches:`, branches.map(b => b.name));
+                
+                // Step 2: Explore each branch to find content
+                const branchAnalysis = await exploreBranches(repo, branches);
+                console.log(`📂 Branch analysis complete:`, branchAnalysis);
+                
+                // Step 3: Create comprehensive structure
+                const structure = {
+                    branches: branchAnalysis,
+                    defaultBranch: branchAnalysis.find(b => b.hasContent) || branchAnalysis[0],
+                    allFiles: [],
+                    directories: {},
+                    entryPoints: []
+                };
+                
+                // Collect all files and find entry points across all branches
+                branchAnalysis.forEach(branch => {
+                    if (branch.structure && branch.structure.allFiles) {
+                        branch.structure.allFiles.forEach(file => {
+                            const fileWithBranch = {
+                                ...file,
+                                branch: branch.name,
+                                fullUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/${branch.name}/${file.path}`
+                            };
+                            structure.allFiles.push(fileWithBranch);
+                            
+                            // Check if this could be an entry point
+                            if (isLikelyEntryPoint(file)) {
+                                structure.entryPoints.push(fileWithBranch);
+                            }
+                        });
+                    }
+                });
+                
+                console.log(`✅ Found ${structure.allFiles.length} total files across ${branches.length} branches`);
+                console.log(`🎯 Found ${structure.entryPoints.length} potential entry points`);
+                
+                repo.structure = structure;
+                repoStructures.set(repo.id, structure);
+                
+                NotificationManager.success(`Successfully analyzed ${repo.id} - found ${structure.allFiles.length} files across ${branches.length} branches`);
+                
+                if (currentRepo && currentRepo.id === repo.id) {
+                    loadRepositoryContent();
+                }
+                
+                updateRepoMenu();
+                
+            } catch (error) {
+                console.error(`❌ Error in comprehensive analysis for ${repo.id}:`, error);
+                
+                // Fallback to enhanced structure
+                const fallbackStructure = await createEnhancedFallbackStructure(repo);
+                repo.structure = fallbackStructure;
+                repoStructures.set(repo.id, fallbackStructure);
+                
+                NotificationManager.warning(`Limited analysis for ${repo.id} - using fallback mode`);
+                
+                if (currentRepo && currentRepo.id === repo.id) {
+                    loadRepositoryContent();
+                }
+                
+                updateRepoMenu();
+            }
+        }
+
+        // Discover all branches in a repository
+        async function discoverBranches(repo) {
+            const commonBranches = ['main', 'master', 'gh-pages', 'develop', 'dev'];
+            const discoveredBranches = [];
+            
+            try {
+                // Try to get branches from GitHub API
+                const branchUrl = `${CONFIG.API.GITHUB_BASE}/repos/${repo.owner}/${repo.name}/branches`;
+                const response = await httpClient.fetch(branchUrl);
+                
+                if (response.ok) {
+                    const branches = await response.json();
+                    console.log(`📋 API returned ${branches.length} branches`);
+                    return branches.map(b => ({
+                        name: b.name,
+                        commit: b.commit?.sha,
+                        protected: b.protected || false
+                    }));
+                }
+            } catch (error) {
+                console.log(`⚠️ Branch API failed, testing common branches manually`);
+            }
+            
+            // Fallback: Test common branch names by trying to access them
+            for (const branchName of commonBranches) {
+                try {
+                    const testUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/${branchName}/README.md`;
+                    
+                    // Test if branch exists by trying to fetch a common file
+                    const response = await fetch(testUrl, { method: 'HEAD', mode: 'no-cors' });
+                    
+                    // Since we can't read the response in no-cors mode, assume it exists
+                    discoveredBranches.push({
+                        name: branchName,
+                        tested: true
+                    });
+                    
+                    console.log(`✅ Branch '${branchName}' appears to exist`);
+                } catch (error) {
+                    console.log(`❌ Branch '${branchName}' test failed:`, error.message);
+                }
+            }
+            
+            // If no branches found, default to 'main'
+            if (discoveredBranches.length === 0) {
+                discoveredBranches.push({ name: 'main', default: true });
+            }
+            
+            return discoveredBranches;
+        }
+
+        // Explore each branch to find content
+        async function exploreBranches(repo, branches) {
+            const branchAnalysis = [];
+            
+            for (const branch of branches.slice(0, 3)) { // Limit to first 3 branches to avoid too many requests
+                console.log(`🌿 Exploring branch: ${branch.name}`);
+                
+                try {
+                    const branchStructure = await exploreDirectoryComprehensive(repo.owner, repo.name, '', branch.name);
+                    
+                    const analysis = {
+                        name: branch.name,
+                        structure: branchStructure,
+                        hasContent: branchStructure && branchStructure.allFiles && branchStructure.allFiles.length > 0,
+                        htmlFiles: branchStructure ? branchStructure.allFiles.filter(f => f.name.endsWith('.html')).length : 0,
+                        totalFiles: branchStructure ? branchStructure.allFiles.length : 0
+                    };
+                    
+                    branchAnalysis.push(analysis);
+                    console.log(`📊 Branch '${branch.name}': ${analysis.totalFiles} files, ${analysis.htmlFiles} HTML files`);
+                    
+                } catch (error) {
+                    console.log(`❌ Failed to explore branch '${branch.name}':`, error.message);
+                    branchAnalysis.push({
+                        name: branch.name,
+                        structure: null,
+                        hasContent: false,
+                        error: error.message
+                    });
+                }
+            }
+            
+            return branchAnalysis;
+        }
+
+        // Comprehensive directory exploration (recursive, unlimited depth)
+        async function exploreDirectoryComprehensive(owner, repo, path = '', branch = 'main', maxFiles = 100) {
+            console.log(`📂 Exploring: ${owner}/${repo}/${branch}/${path || 'root'}`);
+            
+            const allFiles = [];
+            const directories = {};
+            
+            try {
+                // Try GitHub API first
+                const url = `${CONFIG.API.GITHUB_BASE}/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+                const response = await httpClient.fetch(url);
+                
+                if (response.ok) {
+                    const contents = await response.json();
+                    
+                    for (const item of contents) {
+                        if (item.type === 'file') {
+                            allFiles.push({
+                                name: item.name,
+                                path: item.path,
+                                size: item.size,
+                                download_url: item.download_url,
+                                branch: branch
+                            });
+                        } else if (item.type === 'dir' && allFiles.length < maxFiles) {
+                            // Recursively explore subdirectories
+                            const subStructure = await exploreDirectoryComprehensive(owner, repo, item.path, branch, maxFiles - allFiles.length);
+                            if (subStructure && subStructure.allFiles) {
+                                allFiles.push(...subStructure.allFiles);
+                                directories[item.name] = subStructure;
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log(`⚠️ API exploration failed for ${path}, trying pattern-based discovery`);
+                
+                // Fallback: Try common directory patterns
+                const commonPaths = [
+                    '',
+                    repo.split('/').pop(), // Repository name as folder
+                    'src',
+                    'public',
+                    'dist',
+                    'build',
+                    'docs',
+                    'web',
+                    'website',
+                    'app'
+                ];
+                
+                for (const testPath of commonPaths) {
+                    const fullPath = path ? `${path}/${testPath}` : testPath;
+                    const testFiles = await testCommonFilesInPath(owner, repo, fullPath, branch);
+                    allFiles.push(...testFiles);
+                }
+            }
+            
+            return {
+                allFiles: allFiles,
+                directories: directories,
+                path: path,
+                branch: branch
+            };
+        }
+
+        // Test for common files in a specific path
+        async function testCommonFilesInPath(owner, repo, path, branch) {
+            const commonFiles = [
+                'index.html',
+                'main.html',
+                'home.html',
+                'app.html',
+                'style.css',
+                'styles.css',
+                'main.css',
+                'script.js',
+                'main.js',
+                'app.js',
+                'README.md'
+            ];
+            
+            const foundFiles = [];
+            
+            for (const fileName of commonFiles) {
+                try {
+                    const testPath = path ? `${path}/${fileName}` : fileName;
+                    const testUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${testPath}`;
+                    
+                    // Test with HEAD request (no-cors mode)
+                    await fetch(testUrl, { method: 'HEAD', mode: 'no-cors' });
+                    
+                    // If we reach here, assume the file exists
+                    foundFiles.push({
+                        name: fileName,
+                        path: testPath,
+                        download_url: testUrl,
+                        branch: branch,
+                        discovered: true
+                    });
+                    
+                    console.log(`✅ Found: ${testPath}`);
+                } catch (error) {
+                    // File doesn't exist, continue
+                }
+            }
+            
+            return foundFiles;
+        }
+
+        // Check if a file is likely an entry point
+        function isLikelyEntryPoint(file) {
+            const entryPatterns = [
+                /^index\.html?$/i,
+                /^main\.html?$/i,
+                /^home\.html?$/i,
+                /^app\.html?$/i,
+                /\/index\.html?$/i,
+                /\/main\.html?$/i
+            ];
+            
+            return entryPatterns.some(pattern => pattern.test(file.path));
+        }
+
+        async function createEnhancedFallbackStructure(repo) {
+            console.log(`🔧 Creating enhanced fallback with branch and directory discovery for ${repo.id}`);
+            
+            // Test multiple branches
+            const branchesToTest = ['main', 'master', 'gh-pages', 'develop'];
+            const branchResults = [];
+            
+            for (const branch of branchesToTest) {
+                console.log(`🌿 Testing branch: ${branch}`);
+                
+                try {
+                    // Enhanced directory patterns with special focus on same-name folders
+                    const repoName = repo.name.split('/').pop(); // Get just the repo name part
+                    const commonPaths = [
+                        '',  // root
+                        repoName, // Same name as repository (CRITICAL PATTERN for cases like Drawing_App/Drawing_App/)
+                        `${repoName}/src`,
+                        `${repoName}/public`,
+                        `${repoName}/dist`,
+                        `${repoName}/build`,
+                        `${repoName}/web`,
+                        `${repoName}/app`,
+                        `${repoName}/WebContent`, // For JSP/Java projects
+                        `${repoName}/${repoName}`, // Double nesting pattern
+                        'src',
+                        'public',
+                        'dist',
+                        'build',
+                        'docs',
+                        'web',
+                        'website',
+                        'app',
+                        'frontend',
+                        'client'
+                    ];
+                    
+                    // Sort paths to prioritize same-name folder patterns
+                    const prioritizedPaths = commonPaths.sort((a, b) => {
+                        // Highest priority: exact same name as repo
+                        if (a === repoName && b !== repoName) return -1;
+                        if (a !== repoName && b === repoName) return 1;
+                        
+                        // High priority: paths that start with repo name
+                        if (a.startsWith(repoName) && !b.startsWith(repoName)) return -1;
+                        if (!a.startsWith(repoName) && b.startsWith(repoName)) return 1;
+                        
+                        // Then by path length (simpler first)
+                        return a.length - b.length;
+                    });
+                    
+                    const branchFiles = [];
+                    let hasContent = false;
+                    
+                    console.log(`🎯 Priority testing order for ${branch}:`, prioritizedPaths);
+                    
+                    for (const path of prioritizedPaths) {
+                        const pathFiles = await testCommonFilesInPath(repo.owner, repo.name, path, branch);
+                        if (pathFiles.length > 0) {
+                            hasContent = true;
+                            branchFiles.push(...pathFiles);
+                            console.log(`✅ Found ${pathFiles.length} files in ${branch}/${path || 'root'}`);
+                            
+                            // If we found files in the same-name folder, prioritize this branch
+                            if (path === repoName) {
+                                console.log(`🎯 PRIORITY: Found files in same-name folder ${branch}/${repoName}/`);
+                            }
+                        }
+                    }
+                    
+                    if (hasContent) {
+                        const htmlFiles = branchFiles.filter(f => f.name.endsWith('.html'));
+                        const hasSameNameFolder = branchFiles.some(f => f.path.startsWith(`${repoName}/`));
+                        
+                        branchResults.push({
+                            name: branch,
+                            hasContent: true,
+                            totalFiles: branchFiles.length,
+                            htmlFiles: htmlFiles.length,
+                            hasSameNameFolder: hasSameNameFolder, // Special flag for prioritization
+                            structure: {
+                                allFiles: branchFiles,
+                                path: '',
+                                branch: branch
+                            }
+                        });
+                        
+                        console.log(`🎯 Branch ${branch}: Found ${branchFiles.length} files, ${htmlFiles.length} HTML, same-name folder: ${hasSameNameFolder}`);
+                    } else {
+                        branchResults.push({
+                            name: branch,
+                            hasContent: false,
+                            totalFiles: 0,
+                            htmlFiles: 0
+                        });
+                    }
+                    
+                } catch (error) {
+                    console.log(`❌ Branch ${branch} test failed:`, error.message);
+                    branchResults.push({
+                        name: branch,
+                        hasContent: false,
+                        error: error.message
+                    });
+                }
+            }
+            
+            // Combine all files from all branches
+            const allFiles = [];
+            const entryPoints = [];
+            
+            branchResults.forEach(branch => {
+                if (branch.structure && branch.structure.allFiles) {
+                    branch.structure.allFiles.forEach(file => {
+                        const fileWithBranch = {
+                            ...file,
+                            branch: branch.name,
+                            fullUrl: `https://raw.githubusercontent.com/${repo.owner}/${repo.name}/${branch.name}/${file.path}`
+                        };
+                        allFiles.push(fileWithBranch);
+                        
+                        // Check if this could be an entry point
+                        if (isLikelyEntryPoint(file)) {
+                            entryPoints.push(fileWithBranch);
+                        }
+                    });
+                }
+            });
+            
+            // Sort branches by priority (same-name folder pattern first)
+            const workingBranches = branchResults.filter(b => b.hasContent).sort((a, b) => {
+                // Prioritize branches with same-name folder structure
+                if (a.hasSameNameFolder && !b.hasSameNameFolder) return -1;
+                if (!a.hasSameNameFolder && b.hasSameNameFolder) return 1;
+                
+                // Then by HTML file count
+                return (b.htmlFiles || 0) - (a.htmlFiles || 0);
+            });
+            
+            // Sort entry points by priority too
+            entryPoints.sort((a, b) => {
+                const repoName = repo.name.split('/').pop();
+                
+                // Prioritize files in same-name folders
+                const aInSameNameFolder = a.path.startsWith(`${repoName}/`);
+                const bInSameNameFolder = b.path.startsWith(`${repoName}/`);
+                if (aInSameNameFolder && !bInSameNameFolder) return -1;
+                if (!aInSameNameFolder && bInSameNameFolder) return 1;
+                
+                // Then by branch preference (main/master first)
+                if ((a.branch === 'main' || a.branch === 'master') && b.branch !== 'main' && b.branch !== 'master') return -1;
+                if ((b.branch === 'main' || b.branch === 'master') && a.branch !== 'main' && a.branch !== 'master') return 1;
+                
+                // Then by path depth (simpler paths first)
+                return a.path.split('/').length - b.path.split('/').length;
+            });
+            
+            console.log(`🏆 Final prioritization: ${entryPoints.length} entry points found`);
+            if (entryPoints.length > 0) {
+                console.log(`🥇 Top entry point: ${entryPoints[0].branch}/${entryPoints[0].path}`);
+            }
+            
+            return {
+                fallback: true,
+                enhanced: true,
+                branches: branchResults,
+                allFiles: allFiles,
+                entryPoints: entryPoints,
+                defaultBranch: workingBranches.length > 0 ? workingBranches[0] : null,
+                files: allFiles, // For backward compatibility
+                note: `Enhanced multi-branch discovery completed - found ${allFiles.length} files across ${workingBranches.length} accessible branches. Detected same-name folder pattern: ${workingBranches.some(b => b.hasSameNameFolder) ? 'YES' : 'NO'}`,
+                suggestion: 'Try the GitHub Pages, branch selector, or file browser options'
+            };
+        }
+
+        async function createFallbackStructure(repo) {
+            return {
+                fallback: true,
+                files: [
+                    {
+                        name: 'index.html',
+                        path: 'index.html',
+                        download_url: `${CONFIG.API.RAW_BASE}/${repo.owner}/${repo.name}/main/index.html`
+                    }
+                ],
+                note: 'API access limited - using common file patterns'
+            };
+        }
+
+        async function exploreDirectory(owner, repo, path = '', maxDepth = 2, providedContents = null, currentDepth = 0) {
+            if (currentDepth >= maxDepth) return null;
+            
+            try {
+                let contents;
+                
+                if (providedContents && path === '') {
+                    contents = providedContents;
+                } else {
+                    const url = `${CONFIG.API.GITHUB_BASE}/repos/${owner}/${repo}/contents/${path}`;
+                    const response = await httpClient.fetch(url);
+                    
+                    if (!response.ok) return null;
+                    contents = await response.json();
+                }
+                
+                const structure = {
+                    files: [],
+                    directories: {}
+                };
+                
+                for (const item of contents) {
+                    if (item.type === 'file') {
+                        structure.files.push({
+                            name: item.name,
+                            path: item.path,
+                            size: item.size,
+                            download_url: item.download_url
+                        });
+                    } else if (item.type === 'dir' && currentDepth < maxDepth - 1) {
+                        const subDir = await exploreDirectory(owner, repo, item.path, maxDepth, null, currentDepth + 1);
+                        if (subDir) {
+                            structure.directories[item.name] = subDir;
+                        }
+                    }
+                }
+                
+                return structure;
+                
+            } catch (error) {
+                console.error(`❌ Error exploring directory ${path}:`, error);
+                return null;
+            }
+        }
+
+        async function analyzeAllStructures() {
+            const button = document.getElementById('analyze-btn');
+            const originalText = button.textContent;
+            button.textContent = 'Analyzing...';
+            button.disabled = true;
+            
+            try {
+                const promises = repositories.map(repo => analyzeRepositoryStructure(repo));
+                await Promise.allSettled(promises);
+                
+                NotificationManager.success('All repositories analyzed');
+            } catch (error) {
+                ErrorHandler.handle(error, 'analyzeAllStructures');
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // Enhanced entry point detection for multi-branch structure
+        function findBestEntryPoint(structure) {
+            if (!structure) return null;
+            
+            // If we have a comprehensive structure with multiple branches
+            if (structure.branches && structure.allFiles) {
+                console.log(`🎯 Searching for entry points across ${structure.allFiles.length} files`);
+                
+                // First, look for entry points that match common patterns
+                const entryPoints = structure.entryPoints || [];
+                
+                if (entryPoints.length > 0) {
+                    // Prioritize by branch and path
+                    const prioritized = entryPoints.sort((a, b) => {
+                        // Prefer main/master branches
+                        if ((a.branch === 'main' || a.branch === 'master') && b.branch !== 'main' && b.branch !== 'master') return -1;
+                        if ((b.branch === 'main' || b.branch === 'master') && a.branch !== 'main' && a.branch !== 'master') return 1;
+                        
+                        // Prefer simpler paths (fewer slashes)
+                        const aDepth = a.path.split('/').length;
+                        const bDepth = b.path.split('/').length;
+                        return aDepth - bDepth;
+                    });
+                    
+                    return {
+                        type: 'entry',
+                        file: prioritized[0],
+                        confidence: 'high',
+                        alternatives: prioritized.slice(1, 3) // Show up to 2 alternatives
+                    };
+                }
+                
+                // Fallback: look for any HTML file
+                const htmlFiles = structure.allFiles.filter(f => f.name.endsWith('.html'));
+                if (htmlFiles.length > 0) {
+                    const bestHtml = htmlFiles.sort((a, b) => {
+                        // Same prioritization logic
+                        if ((a.branch === 'main' || a.branch === 'master') && b.branch !== 'main' && b.branch !== 'master') return -1;
+                        if ((b.branch === 'main' || b.branch === 'master') && a.branch !== 'main' && a.branch !== 'master') return 1;
+                        return a.path.split('/').length - b.path.split('/').length;
+                    })[0];
+                    
+                    return {
+                        type: 'html',
+                        file: bestHtml,
+                        confidence: 'medium',
+                        alternatives: htmlFiles.slice(1, 3)
+                    };
+                }
+                
+                // Look for README
+                const readmeFiles = structure.allFiles.filter(f => f.name.toLowerCase().startsWith('readme'));
+                if (readmeFiles.length > 0) {
+                    return {
+                        type: 'readme',
+                        file: readmeFiles[0],
+                        confidence: 'low'
+                    };
+                }
+            }
+            
+            // Fallback to original logic for old structure format
+            if (structure.files) {
+                const allFiles = [];
+                
+                function collectFiles(struct, basePath = '') {
+                    if (struct.files) {
+                        struct.files.forEach(file => {
+                            allFiles.push({
+                                ...file,
+                                fullPath: basePath ? `${basePath}/${file.name}` : file.name
+                            });
+                        });
+                    }
+                    
+                    if (struct.directories) {
+                        Object.entries(struct.directories).forEach(([dirName, dirStruct]) => {
+                            const newPath = basePath ? `${basePath}/${dirName}` : dirName;
+                            collectFiles(dirStruct, newPath);
+                        });
+                    }
+                }
+                
+                collectFiles(structure);
+                
+                for (const pattern of FILE_PATTERNS.entry_files) {
+                    const found = allFiles.find(file => 
+                        file.fullPath === pattern || file.fullPath.endsWith(`/${pattern}`)
+                    );
+                    if (found) {
+                        return {
+                            type: 'entry',
+                            file: found,
+                            confidence: 'high'
+                        };
+                    }
+                }
+                
+                const htmlFiles = allFiles.filter(file => file.name.endsWith('.html'));
+                if (htmlFiles.length > 0) {
+                    return {
+                        type: 'html',
+                        file: htmlFiles[0],
+                        confidence: 'medium'
+                    };
+                }
+            }
+            
+            return null;
+        }
+
+        async function loadRepositoryContent() {
+            if (!currentRepo) return;
+            
+            updateContentInfo();
+            
+            const container = document.getElementById('content-container');
+            LoadingManager.show(container, 'Loading content...', 0);
+            
+            try {
+                const structure = repoStructures.get(currentRepo.id) || currentRepo.structure;
+                
+                if (!structure) {
+                    LoadingManager.show(container, 'Analyzing repository structure...', 25);
+                    await analyzeRepositoryStructure(currentRepo);
+                    return loadRepositoryContent();
+                }
+                
+                if (structure.error) {
+                    throw new Error(structure.error);
+                }
+                
+                LoadingManager.updateProgress(container, 50, 'Finding entry point...');
+                const entryPoint = findBestEntryPoint(structure);
+                
+                LoadingManager.updateProgress(container, 75, 'Loading content...');
+                
+                if (currentViewMode === 'auto') {
+                    await loadAutoMode(entryPoint, structure);
+                } else if (currentViewMode === 'iframe') {
+                    loadIframeMode();
+                } else if (currentViewMode === 'html') {
+                    await loadHtmlMode(entryPoint);
+                } else if (currentViewMode === 'explore') {
+                    loadExploreMode(structure);
+                }
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error loading repository: ${ErrorHandler.handle(error, 'loadRepositoryContent')}</div>`;
+            }
+        }
+
+        async function loadAutoMode(entryPoint, structure) {
+            const container = document.getElementById('content-container');
+            
+            // Handle error or basic fallback structures
+            if (structure && (structure.error || (structure.fallback && !structure.branches))) {
+                const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+                const repoUrl = `https://github.com/${currentRepo.id}`;
+                
+                let infoHtml = '';
+                
+                if (structure.error) {
+                    infoHtml = `
+                        <div class="structure-info">
+                            <strong>⚠️ Repository Analysis Failed</strong><br>
+                            ${structure.message || 'Unable to analyze repository structure'}<br><br>
+                            <strong>You can still try these options:</strong><br><br>
+                            <button onclick="loadIframeMode('${githubPagesUrl}')" style="margin-right: 10px;">🌐 Try GitHub Pages</button>
+                            <button onclick="loadDirectHtml()" style="margin-right: 10px;">📄 Try Direct HTML</button>
+                            <a href="${repoUrl}" target="_blank" style="padding: 6px 12px; background: #4a5568; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">🔗 View on GitHub</a>
+                        </div>
+                    `;
+                } else if (structure.enhanced) {
+                    const htmlFiles = structure.files.filter(f => f.name.endsWith('.html'));
+                    const cssFiles = structure.files.filter(f => f.name.endsWith('.css'));
+                    const jsFiles = structure.files.filter(f => f.name.endsWith('.js'));
+                    
+                    infoHtml = `
+                        <div class="structure-info">
+                            <strong>🔧 Enhanced Fallback Mode</strong><br>
+                            ${structure.note}<br><br>
+                            
+                            <strong>Detected potential files:</strong><br>
+                            📄 HTML files: ${htmlFiles.length}<br>
+                            🎨 CSS files: ${cssFiles.length}<br>
+                            ⚡ JS files: ${jsFiles.length}<br><br>
+                            
+                            <strong>Try these options:</strong><br>
+                            <button onclick="loadIframeMode('${githubPagesUrl}')" style="margin: 3px;">🌐 GitHub Pages</button>
+                            <button onclick="loadDirectHtml()" style="margin: 3px;">📄 Try Main HTML</button>
+                            <button onclick="setViewMode('explore')" style="margin: 3px;">📁 Browse Files</button>
+                            <br>
+                            <a href="${repoUrl}" target="_blank" style="margin: 3px; padding: 6px 12px; background: #4a5568; color: white; text-decoration: none; border-radius: 6px; font-size: 12px;">🔗 View on GitHub</a>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = infoHtml;
+                return;
+            }
+            
+            // Handle comprehensive multi-branch structure
+            if (structure && structure.branches) {
+                const totalFiles = structure.allFiles ? structure.allFiles.length : 0;
+                const totalBranches = structure.branches.length;
+                const htmlFiles = structure.allFiles ? structure.allFiles.filter(f => f.name.endsWith('.html')).length : 0;
+                
+                console.log(`📊 Comprehensive structure: ${totalFiles} files across ${totalBranches} branches`);
+                
+                // Create branch selector and summary
+                let branchSummary = structure.branches.map(branch => 
+                    `<span style="display: inline-block; margin: 2px 8px 2px 0; padding: 2px 6px; background: ${branch.hasContent ? '#2d5a27' : '#4a4a4a'}; border-radius: 4px; font-size: 11px;">
+                        ${branch.name} (${branch.totalFiles || 0} files)
+                    </span>`
+                ).join('');
+                
+                let contentHtml = `
+                    <div class="structure-info">
+                        <strong>🌿 Multi-Branch Repository Discovered</strong><br>
+                        Found ${totalFiles} files across ${totalBranches} branches with ${htmlFiles} HTML files<br><br>
+                        
+                        <strong>Branches:</strong><br>
+                        ${branchSummary}<br><br>
+                `;
+                
+                if (entryPoint) {
+                    const file = entryPoint.file;
+                    const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+                    
+                    contentHtml += `
+                        <strong>🎯 Best Entry Point Found:</strong><br>
+                        <code style="background: #2d3748; padding: 2px 6px; border-radius: 4px;">${file.branch}/${file.path}</code> 
+                        (${entryPoint.confidence} confidence)<br><br>
+                    `;
+                    
+                    if (entryPoint.alternatives && entryPoint.alternatives.length > 0) {
+                        contentHtml += `
+                            <strong>📋 Alternative Entry Points:</strong><br>
+                            ${entryPoint.alternatives.map(alt => 
+                                `<small style="display: block; margin: 2px 0;"><code style="background: #4a5568; padding: 1px 4px; border-radius: 3px;">${alt.branch}/${alt.path}</code></small>`
+                            ).join('')}<br>
+                        `;
+                    }
+                    
+                    contentHtml += `
+                        <strong>🚀 Try these options:</strong><br>
+                        <button onclick="loadIframeMode('${githubPagesUrl}')" style="margin: 3px;">🌐 GitHub Pages</button>
+                        <button onclick="loadSpecificFile('${file.fullUrl || file.download_url}')" style="margin: 3px;">📄 Load Entry Point</button>
+                        <button onclick="setViewMode('explore')" style="margin: 3px;">📁 Browse All Files</button>
+                        <button onclick="showBranchSelector()" style="margin: 3px;">🌿 Select Branch</button>
+                    `;
+                } else {
+                    const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+                    contentHtml += `
+                        <strong>⚠️ No obvious entry point found</strong><br>
+                        This appears to be a code repository without HTML entry files.<br><br>
+                        
+                        <strong>🔍 What you can try:</strong><br>
+                        <button onclick="loadIframeMode('${githubPagesUrl}')" style="margin: 3px;">🌐 GitHub Pages</button>
+                        <button onclick="setViewMode('explore')" style="margin: 3px;">📁 Browse All Files</button>
+                        <button onclick="showBranchSelector()" style="margin: 3px;">🌿 Select Branch</button>
+                    `;
+                }
+                
+                contentHtml += `
+                    </div>
+                `;
+                
+                // If we found a good entry point, try to load it automatically
+                if (entryPoint && entryPoint.file.fullUrl) {
+                    const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+                    
+                    contentHtml += `
+                        <div style="margin-top: 15px;">
+                            <div style="text-align: center; color: #a0aec0; margin-bottom: 10px;">
+                                <small>Attempting to auto-load via GitHub Pages...</small>
+                            </div>
+                            <iframe src="${githubPagesUrl}" style="width:100%; height:500px; border:1px solid #ddd; border-radius:6px;"
+                                    onload="this.style.opacity=1; NotificationManager.success('GitHub Pages loaded successfully!')" 
+                                    onerror="this.style.display='none'; this.nextSibling.style.display='block'"
+                                    style="opacity:0; transition: opacity 0.3s">
+                            </iframe>
+                            <div class="error" style="display:none">
+                                <strong>GitHub Pages not available</strong><br>
+                                <small>Trying direct file access...</small><br><br>
+                                <button onclick="loadSpecificFile('${entryPoint.file.fullUrl}')" style="margin-right: 10px;">📄 Load ${entryPoint.file.path}</button>
+                                <button onclick="setViewMode('explore')">📁 Browse Files</button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = contentHtml;
+                return;
+            }
+            
+            // Fallback for old structure format
+            if (!entryPoint) {
+                const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+                container.innerHTML = `
+                    <div class="structure-info">
+                        <strong>📁 Repository Structure Detected</strong><br>
+                        No obvious entry point found.<br><br>
+                        <button onclick="loadIframeMode('${githubPagesUrl}')" style="margin-right: 10px;">🌐 Try GitHub Pages</button>
+                        <button onclick="setViewMode('explore')">📁 Browse Files</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Standard single-branch entry point
+            const githubPagesUrl = `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+            
+            container.innerHTML = `
+                <div class="structure-info">
+                    <strong>✅ Entry point found:</strong> ${entryPoint.file.fullPath || entryPoint.file.path}<br>
+                    <button onclick="loadIframeMode('${githubPagesUrl}')" style="margin-right: 10px;">🌐 GitHub Pages</button>
+                    <button onclick="setViewMode('html')">📄 View HTML</button>
+                    <button onclick="setViewMode('explore')">📁 Browse Files</button>
+                </div>
+                <iframe src="${githubPagesUrl}" style="width:100%; height:600px; border:1px solid #ddd; border-radius:6px;"
+                        onload="this.style.opacity=1; NotificationManager.success('GitHub Pages loaded successfully!')" 
+                        onerror="this.style.display='none'; this.nextSibling.style.display='block'"
+                        style="opacity:0; transition: opacity 0.3s">
+                </iframe>
+                <div class="error" style="display:none">
+                    GitHub Pages not available. Try HTML mode instead.
+                </div>
+            `;
+        }
+
+        // Load a specific file by URL
+        async function loadSpecificFile(fileUrl) {
+            const container = document.getElementById('content-container');
+            LoadingManager.show(container, 'Loading specific file...', 50);
+            
+            try {
+                const response = await httpClient.fetch(fileUrl);
+                const content = await response.text();
+                
+                container.innerHTML = `
+                    <div class="structure-info">
+                        <strong>📄 Loaded:</strong> ${fileUrl.split('/').pop()}<br>
+                        <small>Direct file access</small>
+                    </div>
+                    <iframe srcdoc="${content.replace(/"/g, '&quot;')}" style="width:100%; height:600px; border:1px solid #ddd; border-radius:6px;"></iframe>
+                `;
+                
+                NotificationManager.success('File loaded successfully!');
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="error">
+                        Failed to load file: ${ErrorHandler.handle(error, 'loadSpecificFile')}<br><br>
+                        <button onclick="loadRepositoryContent()">← Back</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Show branch selector interface
+        function showBranchSelector() {
+            const structure = repoStructures.get(currentRepo.id);
+            if (!structure || !structure.branches) {
+                NotificationManager.warning('No branch information available');
+                return;
+            }
+            
+            const container = document.getElementById('content-container');
+            
+            let branchOptions = structure.branches.map(branch => {
+                const statusIcon = branch.hasContent ? '✅' : '❌';
+                const fileCount = branch.totalFiles || 0;
+                const htmlCount = branch.htmlFiles || 0;
+                
+                return `
+                    <div style="background: #2d3748; margin: 8px 0; padding: 12px; border-radius: 6px; border-left: 4px solid ${branch.hasContent ? '#38a169' : '#e53e3e'};">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: #f7fafc;">${statusIcon} ${branch.name}</strong><br>
+                                <small style="color: #a0aec0;">${fileCount} files total, ${htmlCount} HTML files</small>
+                                ${branch.error ? `<br><small style="color: #fc8181;">Error: ${branch.error}</small>` : ''}
+                            </div>
+                            <div>
+                                ${branch.hasContent ? 
+                                    `<button onclick="loadBranchContent('${branch.name}')" style="background: #38a169; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Explore Branch</button>` :
+                                    `<button disabled style="background: #4a5568; color: #a0aec0; border: none; padding: 6px 12px; border-radius: 4px;">No Content</button>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div style="padding: 20px;">
+                    <h3 style="color: #f7fafc; margin-bottom: 20px;">🌿 Select Branch to Explore</h3>
+                    
+                    <div style="background: rgba(56, 178, 172, 0.1); color: #4fd1c7; padding: 12px; margin-bottom: 20px; border-radius: 6px; border-left: 4px solid #38b2ac;">
+                        <strong>Repository:</strong> ${currentRepo.id}<br>
+                        <strong>Total Branches:</strong> ${structure.branches.length}<br>
+                        <strong>Total Files:</strong> ${structure.allFiles ? structure.allFiles.length : 0}
+                    </div>
+                    
+                    ${branchOptions}
+                    
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button onclick="loadRepositoryContent()" style="background: #4a5568; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">← Back to Auto Mode</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load content from a specific branch
+        function loadBranchContent(branchName) {
+            const structure = repoStructures.get(currentRepo.id);
+            const branch = structure.branches.find(b => b.name === branchName);
+            
+            if (!branch || !branch.structure) {
+                NotificationManager.error('Branch data not available');
+                return;
+            }
+            
+            console.log(`🌿 Loading content from branch: ${branchName}`);
+            
+            // Temporarily replace the current structure with the branch structure for explore mode
+            const originalStructure = structure;
+            repoStructures.set(currentRepo.id, {
+                ...branch.structure,
+                currentBranch: branchName,
+                originalStructure: originalStructure
+            });
+            
+            // Switch to explore mode to show the branch content
+            setViewMode('explore');
+            
+            NotificationManager.success(`Switched to branch: ${branchName}`);
+        }
+
+        // New function to try loading HTML directly
+        async function loadDirectHtml() {
+            const container = document.getElementById('content-container');
+            LoadingManager.show(container, 'Trying direct HTML access...', 0);
+            
+            const structure = repoStructures.get(currentRepo.id);
+            if (!structure || !structure.files) {
+                container.innerHTML = `
+                    <div class="error">
+                        No file structure available to try direct HTML access.<br><br>
+                        <button onclick="loadIframeMode()">🌐 Try GitHub Pages</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Try to find and load HTML files
+            const htmlFiles = structure.files.filter(f => f.name.endsWith('.html'));
+            
+            if (htmlFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="error">
+                        No HTML files found in the repository structure.<br><br>
+                        <button onclick="loadIframeMode()">🌐 Try GitHub Pages</button>
+                        <button onclick="setViewMode('explore')">📁 Browse All Files</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Try to load the first HTML file
+            const firstHtml = htmlFiles[0];
+            LoadingManager.updateProgress(container, 50, `Loading ${firstHtml.path}...`);
+            
+            try {
+                // Try to fetch the raw file
+                const response = await fetch(firstHtml.download_url, { mode: 'cors' });
+                
+                if (response.ok) {
+                    const htmlContent = await response.text();
+                    container.innerHTML = `
+                        <div class="structure-info">
+                            <strong>✅ Direct HTML loaded:</strong> ${firstHtml.path}<br>
+                            <small>Displaying raw HTML content</small>
+                        </div>
+                        <iframe srcdoc="${htmlContent.replace(/"/g, '&quot;')}" style="width:100%; height:600px; border:1px solid #ddd; border-radius:6px;"></iframe>
+                    `;
+                    NotificationManager.success('HTML file loaded successfully!');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.log(`❌ Direct HTML fetch failed:`, error);
+                
+                // Show available HTML files for manual selection
+                let fileList = htmlFiles.map(f => 
+                    `<li><a href="${f.download_url}" target="_blank" style="color: #63b3ed;">${f.path}</a></li>`
+                ).join('');
+                
+                container.innerHTML = `
+                    <div class="structure-info">
+                        <strong>⚠️ Automatic HTML loading failed</strong><br>
+                        You can try accessing these HTML files directly:<br><br>
+                        <ul style="margin-left: 20px; line-height: 1.8;">
+                            ${fileList}
+                        </ul>
+                        <br>
+                        <button onclick="loadIframeMode()" style="margin-right: 10px;">🌐 Try GitHub Pages</button>
+                        <button onclick="setViewMode('explore')">📁 Browse All Files</button>
+                    </div>
+                `;
+            }
+        }
+
+        function loadIframeMode(customUrl = null) {
+            const container = document.getElementById('content-container');
+            const url = customUrl || `https://${currentRepo.owner}.github.io/${currentRepo.name}`;
+            
+            container.innerHTML = `
+                <iframe class="content-iframe" src="${url}" 
+                        onload="this.style.opacity=1" 
+                        onerror="this.style.display='none'; this.nextSibling.style.display='block'"
+                        style="opacity:0; transition: opacity 0.3s">
+                </iframe>
+                <div class="error" style="display:none">
+                    Unable to load in iframe. Try HTML mode instead.
+                </div>
+            `;
+        }
+
+        async function loadHtmlMode(entryPoint) {
+            const container = document.getElementById('content-container');
+            
+            if (!entryPoint || !entryPoint.file.download_url) {
+                container.innerHTML = '<div class="error">No HTML file found to display</div>';
+                return;
+            }
+            
+            try {
+                LoadingManager.show(container, 'Loading HTML...', 50);
+                
+                const response = await httpClient.fetch(entryPoint.file.download_url);
+                const htmlContent = await response.text();
+                
+                container.innerHTML = `
+                    <div class="structure-info">
+                        <strong>📄 Loaded:</strong> ${entryPoint.file.fullPath || entryPoint.file.path}
+                    </div>
+                    <iframe srcdoc="${htmlContent.replace(/"/g, '&quot;')}" style="width:100%; height:600px; border:1px solid #ddd; border-radius:6px;"></iframe>
+                `;
+                
+            } catch (error) {
+                container.innerHTML = `<div class="error">Error loading HTML: ${ErrorHandler.handle(error, 'loadHtmlMode')}</div>`;
+            }
+        }
+
+        function loadExploreMode(structure) {
+            const container = document.getElementById('content-container');
+            
+            // Handle comprehensive multi-branch structure
+            if (structure && structure.branches && structure.allFiles) {
+                const currentBranch = structure.currentBranch || (structure.defaultBranch ? structure.defaultBranch.name : 'main');
+                const totalFiles = structure.allFiles.length;
+                
+                container.innerHTML = `
+                    <div class="split-view">
+                        <div class="file-explorer">
+                            <div style="padding: 0 0 15px 0; border-bottom: 1px solid #4a5568; margin-bottom: 15px;">
+                                <h3 style="margin-bottom: 10px;">📁 Repository Explorer</h3>
+                                <div style="font-size: 12px; color: #a0aec0;">
+                                    <strong>${currentRepo.id}</strong><br>
+                                    ${totalFiles} files across ${structure.branches.length} branches
+                                </div>
+                                ${structure.currentBranch ? 
+                                    `<div style="margin-top: 8px; padding: 4px 8px; background: #2d5a27; border-radius: 4px; font-size: 11px;">
+                                        🌿 Branch: ${currentBranch}
+                                        <button onclick="showBranchSelector()" style="margin-left: 8px; background: none; border: 1px solid #4fd1c7; color: #4fd1c7; padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;">Switch</button>
+                                    </div>` : 
+                                    `<button onclick="showBranchSelector()" style="margin-top: 8px; background: #38b2ac; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🌿 Select Branch</button>`
+                                }
+                            </div>
+                            <div class="file-tree" id="file-tree"></div>
+                        </div>
+                        <div style="flex: 1; padding: 20px; overflow-y: auto;">
+                            <div id="file-content">
+                                <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                                    <h3>📁 Multi-Branch File Explorer</h3>
+                                    <p>Select a file from the left to view its content</p>
+                                    <p><small>Viewing ${totalFiles} files from ${structure.branches.length} branches</small></p>
+                                    
+                                    ${structure.entryPoints && structure.entryPoints.length > 0 ? `
+                                        <div style="margin-top: 20px; padding: 15px; background: rgba(56, 178, 172, 0.1); border-radius: 6px;">
+                                            <strong style="color: #4fd1c7;">🎯 Quick Access - Entry Points:</strong><br><br>
+                                            ${structure.entryPoints.slice(0, 3).map(entry => 
+                                                `<button onclick="loadFileFromStructure('${entry.branch}', '${entry.path}')" 
+                                                         style="display: block; margin: 5px auto; padding: 6px 12px; background: #38b2ac; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                                    📄 ${entry.branch}/${entry.path}
+                                                </button>`
+                                            ).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                renderComprehensiveFileTree(structure);
+                return;
+            }
+            
+            // Handle single-branch or legacy structure
+            container.innerHTML = `
+                <div class="split-view">
+                    <div class="file-explorer">
+                        <h3 style="margin-bottom: 15px;">Repository Files</h3>
+                        <div class="file-tree" id="file-tree"></div>
+                    </div>
+                    <div style="flex: 1; padding: 20px; overflow-y: auto;">
+                        <div id="file-content">
+                            <div style="text-align: center; color: #a0aec0; padding: 40px;">
+                                <h3>📁 File Explorer</h3>
+                                <p>Select a file from the left to view its content</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (structure && structure.allFiles) {
+                renderComprehensiveFileTree(structure);
+            } else {
+                renderFileTree(structure);
+            }
+        }
+
+        // Render comprehensive file tree for multi-branch structure
+        function renderComprehensiveFileTree(structure) {
+            const container = document.getElementById('file-tree');
+            container.innerHTML = '';
+            
+            if (!structure.allFiles || structure.allFiles.length === 0) {
+                container.innerHTML = '<div style="color: #a0aec0; padding: 10px;">No files found</div>';
+                return;
+            }
+            
+            // Group files by branch if showing all branches
+            const showByBranch = !structure.currentBranch;
+            
+            if (showByBranch) {
+                // Group by branch
+                const filesByBranch = {};
+                structure.allFiles.forEach(file => {
+                    if (!filesByBranch[file.branch]) {
+                        filesByBranch[file.branch] = [];
+                    }
+                    filesByBranch[file.branch].push(file);
+                });
+                
+                Object.entries(filesByBranch).forEach(([branchName, files]) => {
+                    // Branch header
+                    const branchDiv = document.createElement('div');
+                    branchDiv.className = 'file-item';
+                    branchDiv.style.fontWeight = 'bold';
+                    branchDiv.style.borderBottom = '1px solid #4a5568';
+                    branchDiv.style.marginBottom = '5px';
+                    branchDiv.style.color = '#81e6d9';
+                    branchDiv.innerHTML = `🌿 ${branchName} (${files.length} files)`;
+                    container.appendChild(branchDiv);
+                    
+                    // Files in this branch
+                    renderFileList(files, container, 1);
+                });
+            } else {
+                // Show files from current branch only
+                const branchFiles = structure.allFiles.filter(f => f.branch === structure.currentBranch);
+                renderFileList(branchFiles, container, 0);
+            }
+        }
+
+        // Render a list of files
+        function renderFileList(files, container, indentLevel = 0) {
+            files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'file-item';
+                fileDiv.style.paddingLeft = `${indentLevel * 20 + 10}px`;
+                
+                const ext = file.name.split('.').pop().toLowerCase();
+                const icon = getFileIcon(ext);
+                
+                fileDiv.innerHTML = `${icon} ${file.name}`;
+                fileDiv.onclick = () => loadFileFromStructure(file.branch, file.path);
+                
+                // Add file path as tooltip
+                fileDiv.title = `${file.branch}/${file.path}`;
+                
+                container.appendChild(fileDiv);
+            });
+        }
+
+        // Get appropriate icon for file type
+        function getFileIcon(ext) {
+            const icons = {
+                'html': '🌐', 'htm': '🌐',
+                'css': '🎨',
+                'js': '⚡', 'mjs': '⚡', 'ts': '🔷',
+                'json': '📋',
+                'md': '📝', 'markdown': '📝',
+                'txt': '📄',
+                'png': '🖼️', 'jpg': '🖼️', 'jpeg': '🖼️', 'gif': '🖼️', 'svg': '🖼️',
+                'pdf': '📕',
+                'zip': '📦', 'tar': '📦', 'gz': '📦',
+                'xml': '📄',
+                'yml': '⚙️', 'yaml': '⚙️',
+                'sh': '⚙️', 'bat': '⚙️'
+            };
+            return icons[ext] || '📄';
+        }
+
+        // Load a specific file from the comprehensive structure
+        async function loadFileFromStructure(branch, path) {
+            const contentDiv = document.getElementById('file-content');
+            LoadingManager.show(contentDiv, `Loading ${path}...`, 0);
+            
+            try {
+                const fileUrl = `https://raw.githubusercontent.com/${currentRepo.owner}/${currentRepo.name}/${branch}/${path}`;
+                const response = await httpClient.fetch(fileUrl);
+                const content = await response.text();
+                
+                const fileName = path.split('/').pop();
+                const extension = fileName.split('.').pop().toLowerCase();
+                
+                LoadingManager.updateProgress(contentDiv, 50, 'Processing content...');
+                
+                if (['html', 'htm'].includes(extension)) {
+                    contentDiv.innerHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <h4>🌐 ${fileName}</h4>
+                            <small style="color: #a0aec0;">Branch: ${branch} | Path: ${path}</small>
+                            <div style="margin-top: 5px;">
+                                <button onclick="loadSpecificFile('${fileUrl}')" style="background: #38b2ac; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer;">🚀 Open Full View</button>
+                                <a href="${fileUrl}" target="_blank" style="margin-left: 8px; padding: 4px 8px; background: #4a5568; color: white; text-decoration: none; border-radius: 4px; font-size: 11px;">🔗 Raw File</a>
+                            </div>
+                        </div>
+                        <iframe srcdoc="${content.replace(/"/g, '&quot;')}" style="width:100%; height:500px; border:1px solid #ddd; border-radius:6px;"></iframe>
+                    `;
+                } else if (['md', 'markdown'].includes(extension)) {
+                    contentDiv.innerHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <h4>📝 ${fileName}</h4>
+                            <small style="color: #a0aec0;">Branch: ${branch} | Path: ${path}</small>
+                        </div>
+                        <div style="background:#f8f9fa; color:#333; padding:20px; border-radius:8px; line-height:1.6;">
+                            <pre style="white-space: pre-wrap; font-family: inherit;">${content}</pre>
+                        </div>
+                    `;
+                } else {
+                    const preview = content.length > 2000 ? content.substring(0, 2000) + '\n\n... (truncated)' : content;
+                    contentDiv.innerHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <h4>📄 ${fileName}</h4>
+                            <small style="color: #a0aec0;">Branch: ${branch} | Path: ${path}</small>
+                            <div style="margin-top: 5px;">
+                                <a href="${fileUrl}" target="_blank" style="padding: 4px 8px; background: #4a5568; color: white; text-decoration: none; border-radius: 4px; font-size: 11px;">🔗 View Raw File</a>
+                            </div>
+                        </div>
+                        <pre style="background:#2d3748; color:#e2e8f0; padding:20px; border-radius:8px; overflow:auto; max-height:600px; border:1px solid #4a5568; white-space: pre-wrap;">${escapeHtml(preview)}</pre>
+                    `;
+                }
+                
+                // Highlight selected file
+                document.querySelectorAll('.file-item').forEach(item => item.classList.remove('selected'));
+                if (event && event.target) {
+                    event.target.classList.add('selected');
+                }
+                
+            } catch (error) {
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        Error loading file: ${ErrorHandler.handle(error, 'loadFileFromStructure')}<br><br>
+                        <small>Branch: ${branch} | Path: ${path}</small><br>
+                        <a href="https://raw.githubusercontent.com/${currentRepo.owner}/${currentRepo.name}/${branch}/${path}" target="_blank" style="color: #63b3ed;">🔗 Try direct link</a>
+                    </div>
+                `;
+            }
+        }
+
+        function renderFileTree(structure, container = null, level = 0) {
+            if (!container) {
+                container = document.getElementById('file-tree');
+                container.innerHTML = '';
+            }
+            
+            if (structure.files) {
+                structure.files.forEach(file => {
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = 'file-item';
+                    fileDiv.style.paddingLeft = `${level * 20 + 10}px`;
+                    fileDiv.textContent = `📄 ${file.name}`;
+                    fileDiv.onclick = () => loadFileContent(file);
+                    container.appendChild(fileDiv);
+                });
+            }
+            
+            if (structure.directories) {
+                Object.entries(structure.directories).forEach(([dirName, dirStructure]) => {
+                    const dirDiv = document.createElement('div');
+                    dirDiv.className = 'file-item';
+                    dirDiv.style.paddingLeft = `${level * 20 + 10}px`;
+                    dirDiv.style.fontWeight = 'bold';
+                    dirDiv.textContent = `📁 ${dirName}`;
+                    container.appendChild(dirDiv);
+                    
+                    renderFileTree(dirStructure, container, level + 1);
+                });
+            }
+        }
+
+        async function loadFileContent(file) {
+            const contentDiv = document.getElementById('file-content');
+            LoadingManager.show(contentDiv, 'Loading file...', 0);
+            
+            try {
+                const response = await httpClient.fetch(file.download_url);
+                const content = await response.text();
+                
+                const extension = file.name.split('.').pop().toLowerCase();
+                
+                if (['html', 'htm'].includes(extension)) {
+                    contentDiv.innerHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <h4>📄 ${file.name}</h4>
+                        </div>
+                        <iframe srcdoc="${content.replace(/"/g, '&quot;')}" style="width:100%; height:500px; border:1px solid #ddd; border-radius:6px;"></iframe>
+                    `;
+                } else {
+                    const preview = content.length > 2000 ? content.substring(0, 2000) + '\n\n... (truncated)' : content;
+                    contentDiv.innerHTML = `
+                        <div style="margin-bottom: 15px;">
+                            <h4>📄 ${file.name}</h4>
+                        </div>
+                        <pre style="background:#2d3748; color:#e2e8f0; padding:20px; border-radius:8px; overflow:auto; max-height:600px; border:1px solid #4a5568; white-space: pre-wrap;">${escapeHtml(preview)}</pre>
+                    `;
+                }
+                
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="error">Error loading file: ${ErrorHandler.handle(error, 'loadFileContent')}</div>`;
+            }
+        }
+
+        // UI functions
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            if (currentRepo) {
+                loadRepositoryContent();
+            }
+            
+            NotificationManager.info(`Switched to ${mode} mode`);
+        }
+
+        function updateContentInfo() {
+            const titleElement = document.getElementById('content-title');
+            const metaElement = document.getElementById('content-meta');
+            
+            if (currentRepo) {
+                const isFavorite = favorites.has(currentRepo.id) ? '⭐ ' : '';
+                titleElement.textContent = `${isFavorite}${currentRepo.owner}/${currentRepo.name}`;
+                metaElement.textContent = `Viewing in ${currentViewMode} mode`;
+            }
+        }
+
+        function updateContentArea() {
+            const container = document.getElementById('content-container');
+            container.innerHTML = `
+                <div class="repo-not-found">
+                    <h3>👋 Welcome to Enhanced Repository Viewer!</h3>
+                    <p>🚀 New features: Better error handling, caching, keyboard shortcuts, and more!</p>
+                    <p>Press <kbd>Ctrl+K</kbd> to focus search, <kbd>?</kbd> for help</p>
+                </div>
+            `;
+            
+            const titleElement = document.getElementById('content-title');
+            const metaElement = document.getElementById('content-meta');
+            titleElement.textContent = 'Select a repository to view';
+            metaElement.textContent = 'Add repositories using the form above';
+        }
+
+        function toggleShortcutsHelp() {
+            const help = document.getElementById('shortcuts-help');
+            help.classList.toggle('visible');
+        }
+
+        // Debug functions with enhanced path display
+        function showDebugInfo() {
+            if (!currentRepo) {
+                NotificationManager.warning('Please select a repository first');
+                return;
+            }
+            
+            const structure = repoStructures.get(currentRepo.id) || currentRepo.structure;
+            const container = document.getElementById('content-container');
+            const cacheStats = httpClient.cache.getStats();
+            
+            let debugHtml = `
+                <div style="padding: 20px; font-family: monospace; font-size: 13px; line-height: 1.4; color: #e2e8f0;">
+                    <h3 style="color: #f7fafc;">🔍 Enhanced Debug Info for ${currentRepo.id}</h3>
+                    
+                    <h4 style="color: #cbd5e0;">📊 Cache & Performance:</h4>
+                    <div style="background: #1a365d; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #2b77cb;">
+                        <strong>Cache Performance:</strong> ${cacheStats.hitRate} hit rate (${cacheStats.hits}/${cacheStats.total})<br>
+                        <strong>Cache Size:</strong> ${cacheStats.size} entries<br>
+                        <strong>Rate Limit:</strong> ${httpClient.rateLimitInfo.remaining}/${httpClient.rateLimitInfo.limit} requests remaining<br>
+                        <strong>API Key:</strong> ${httpClient.apiKey ? '🔑 Active (higher rate limits)' : '🔓 Not set (60/hour limit)'}<br>
+                        <strong>Environment:</strong> ${window.location.host} ${window.location.protocol}<br>
+                    </div>
+                    
+                    <h4 style="color: #cbd5e0;">🌐 CORS & API Access:</h4>
+                    <div style="background: #742a2a; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #fc8181;">
+                        <strong>⚠️ CORS Status:</strong> Cross-origin requests may be blocked<br>
+                        <strong>GitHub API:</strong> ${httpClient.apiKey ? 'Authenticated access (5,000/hour)' : 'Unauthenticated access (60/hour)'}<br>
+                        <strong>Fallback Methods:</strong> CORS proxies, direct raw file access<br><br>
+                        
+                        <strong>🔧 If you're seeing "Failed to fetch" errors:</strong><br>
+                        • This is normal in browser environments (CORS protection)<br>
+                        • The app automatically tries fallback methods<br>
+                        • GitHub Pages and raw file links should still work<br>
+                        • Consider adding an API key for better reliability<br>
+                    </div>
+                    
+                    <h4 style="color: #cbd5e0;">🏗️ Repository Structure Analysis:</h4>
+                    <div style="background: #2d3748; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #4a5568;">
+            `;
+            
+            if (structure) {
+                if (structure.error) {
+                    debugHtml += `<strong>❌ Analysis Failed:</strong> ${structure.message}<br>`;
+                    debugHtml += `<strong>Reason:</strong> Usually CORS restrictions or private repository<br>`;
+                } else if (structure.branches && structure.allFiles) {
+                    // Multi-branch comprehensive structure
+                    debugHtml += `<strong>✅ Comprehensive multi-branch analysis completed</strong><br>`;
+                    debugHtml += `<strong>Branches found:</strong> ${structure.branches.length}<br>`;
+                    debugHtml += `<strong>Total files discovered:</strong> ${structure.allFiles.length}<br>`;
+                    
+                    const htmlFiles = structure.allFiles.filter(f => f.name.endsWith('.html'));
+                    debugHtml += `<strong>HTML files:</strong> ${htmlFiles.length}<br>`;
+                    
+                    if (structure.entryPoints && structure.entryPoints.length > 0) {
+                        debugHtml += `<strong>🎯 Entry points found:</strong><br>`;
+                        structure.entryPoints.slice(0, 3).forEach(entry => {
+                            debugHtml += `&nbsp;&nbsp;• ${entry.branch}/${entry.path}<br>`;
+                        });
+                    }
+                    
+                    // Show branch breakdown
+                    debugHtml += `<br><strong>Branch Analysis:</strong><br>`;
+                    structure.branches.forEach(branch => {
+                        const status = branch.hasContent ? '✅' : '❌';
+                        debugHtml += `&nbsp;&nbsp;${status} ${branch.name}: ${branch.totalFiles || 0} files, ${branch.htmlFiles || 0} HTML<br>`;
+                    });
+                    
+                } else if (structure.fallback) {
+                    debugHtml += `<strong>🔧 Fallback Mode Active</strong><br>`;
+                    debugHtml += `<strong>Type:</strong> ${structure.enhanced ? 'Enhanced' : 'Basic'} fallback<br>`;
+                    debugHtml += `<strong>Files Available:</strong> ${structure.files ? structure.files.length : 0}<br>`;
+                    if (structure.enhanced && structure.branches) {
+                        debugHtml += `<strong>Branches tested:</strong> ${structure.branches.length}<br>`;
+                        const workingBranches = structure.branches.filter(b => b.hasContent);
+                        debugHtml += `<strong>Branches with content:</strong> ${workingBranches.length}<br>`;
+                        if (workingBranches.length > 0) {
+                            debugHtml += `<strong>Working branches:</strong> ${workingBranches.map(b => b.name).join(', ')}<br>`;
+                        }
+                    }
+                } else {
+                    debugHtml += `<strong>✅ Basic structure analysis completed</strong><br>`;
+                    const entryPoint = findBestEntryPoint(structure);
+                    if (entryPoint) {
+                        debugHtml += `<strong>Entry Point:</strong> ${entryPoint.file.fullPath || entryPoint.file.path}<br>`;
+                        debugHtml += `<strong>Confidence:</strong> ${entryPoint.confidence}<br>`;
+                    } else {
+                        debugHtml += `<strong>Entry Point:</strong> None detected<br>`;
+                    }
+                }
+            } else {
+                debugHtml += `<strong>❌ No structure data available</strong><br>`;
+                debugHtml += `<strong>Status:</strong> Analysis may still be running<br>`;
+            }
+            
+            debugHtml += `
+                    </div>
+                    
+                    <h4 style="color: #cbd5e0;">🔗 Discovered File URLs:</h4>
+                    <div style="background: #2d3748; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #4a5568;">
+            `;
+            
+            // Show actual discovered URLs based on structure analysis
+            if (structure && structure.allFiles && structure.allFiles.length > 0) {
+                const htmlFiles = structure.allFiles.filter(f => f.name.endsWith('.html'));
+                
+                if (htmlFiles.length > 0) {
+                    debugHtml += `<strong>📄 Discovered HTML Files:</strong><br>`;
+                    htmlFiles.slice(0, 5).forEach(file => {
+                        const githubUrl = `https://github.com/${currentRepo.id}/tree/${file.branch}/${file.path}`;
+                        const rawUrl = file.download_url || file.fullUrl;
+                        debugHtml += `
+                            <div style="margin: 8px 0; padding: 8px; background: #1a365d; border-radius: 4px;">
+                                <strong style="color: #81e6d9;">${file.path}</strong><br>
+                                <small style="color: #a0aec0;">Branch: ${file.branch}</small><br>
+                                <a href="${githubUrl}" target="_blank" style="color: #63b3ed; font-size: 11px; margin-right: 10px;">🔗 View on GitHub</a>
+                                <a href="${rawUrl}" target="_blank" style="color: #63b3ed; font-size: 11px;">📄 Raw File</a>
+                            </div>
+                        `;
+                    });
+                    
+                    if (htmlFiles.length > 5) {
+                        debugHtml += `<small style="color: #a0aec0;">... and ${htmlFiles.length - 5} more HTML files</small><br>`;
+                    }
+                } else {
+                    debugHtml += `<strong>⚠️ No HTML files found in analysis</strong><br>`;
+                }
+                
+                // Show entry points if found
+                if (structure.entryPoints && structure.entryPoints.length > 0) {
+                    debugHtml += `<br><strong>🎯 Priority Entry Points:</strong><br>`;
+                    structure.entryPoints.slice(0, 3).forEach(entry => {
+                        const githubUrl = `https://github.com/${currentRepo.id}/tree/${entry.branch}/${entry.path}`;
+                        const rawUrl = entry.download_url || entry.fullUrl;
+                        debugHtml += `
+                            <div style="margin: 4px 0; padding: 6px; background: #2d5a27; border-radius: 4px;">
+                                <strong style="color: #68d391;">${entry.path}</strong> (${entry.branch})<br>
+                                <a href="${githubUrl}" target="_blank" style="color: #63b3ed; font-size: 11px; margin-right: 10px;">🔗 GitHub</a>
+                                <a href="${rawUrl}" target="_blank" style="color: #63b3ed; font-size: 11px;">📄 Raw</a>
+                            </div>
+                        `;
+                    });
+                }
+            } else {
+                // Fallback to generic URLs if no specific files discovered
+                debugHtml += `
+                    <strong>🌐 GitHub Pages:</strong><br>
+                    <a href="https://${currentRepo.owner}.github.io/${currentRepo.name}" target="_blank" style="color: #63b3ed; word-break: break-all;">https://${currentRepo.owner}.github.io/${currentRepo.name}</a><br><br>
+                    
+                    <strong>📂 Repository:</strong><br>
+                    <a href="https://github.com/${currentRepo.id}" target="_blank" style="color: #63b3ed; word-break: break-all;">https://github.com/${currentRepo.id}</a><br><br>
+                    
+                    <strong>📄 Common file patterns to try:</strong><br>
+                    <span style="color: #a0aec0; font-size: 11px;">
+                    • https://raw.githubusercontent.com/${currentRepo.id}/main/index.html<br>
+                    • https://raw.githubusercontent.com/${currentRepo.id}/main/${currentRepo.name}/index.html<br>
+                    • https://raw.githubusercontent.com/${currentRepo.id}/main/public/index.html<br>
+                    • https://raw.githubusercontent.com/${currentRepo.id}/main/dist/index.html<br>
+                    </span>
+                `;
+            }
+            
+            debugHtml += `
+                    </div>
+                    
+                    <h4 style="color: #cbd5e0;">🛠️ Troubleshooting Tips:</h4>
+                    <div style="background: #1a365d; padding: 15px; border-radius: 8px; margin: 10px 0; border: 1px solid #2b77cb;">
+                        <strong>If the repository won't load:</strong><br>
+                        1. Try the GitHub Pages URL above<br>
+                        2. Click on the discovered HTML file links<br>
+                        3. Check if the repository is public<br>
+                        4. Verify GitHub Pages is enabled in repository settings<br>
+                        5. Use the 'Browse Files' mode to explore the structure<br>
+                        6. Add a GitHub API key for better access<br><br>
+                        
+                        <strong>Common issues:</strong><br>
+                        • Private repositories: Won't work without authentication<br>
+                        • CORS restrictions: Normal in browser environments<br>
+                        • Nested folders: App now detects ${currentRepo.name}/${currentRepo.name}/ patterns<br>
+                        • GitHub Pages disabled: Check repository settings<br>
+                        • Rate limiting: Add API key or wait and try again<br>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <button onclick="loadRepositoryContent()" style="margin-right: 10px; background: #2b77cb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">← Back to Repository View</button>
+                        <button onclick="analyzeRepositoryStructure(currentRepo)" style="margin-right: 10px; background: #38a169; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">🔄 Retry Analysis</button>
+                        <button onclick="loadDirectHtml()" style="background: #d69e2e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">📄 Try Direct HTML</button>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = debugHtml;
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            const isInputFocused = document.activeElement && 
+                (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+            
+            if (isInputFocused) return;
+            
+            if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('owner-input').focus();
+            } else if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                showDebugInfo();
+            } else if (e.key === '?') {
+                e.preventDefault();
+                toggleShortcutsHelp();
+            } else if (e.key === 'Escape') {
+                document.querySelectorAll('.search-dropdown').forEach(dropdown => {
+                    dropdown.style.display = 'none';
+                });
+                const help = document.getElementById('shortcuts-help');
+                if (help) help.classList.remove('visible');
+            }
+        });
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Make functions globally available for onclick handlers
+                window.loadDirectHtml = loadDirectHtml;
+                window.addRepository = addRepository;
+                window.analyzeAllStructures = analyzeAllStructures;
+                window.showDebugInfo = showDebugInfo;
+                window.toggleShortcutsHelp = toggleShortcutsHelp;
+                window.setViewMode = setViewMode;
+                window.loadIframeMode = loadIframeMode;
+                window.toggleFavorite = toggleFavorite;
+                window.removeRepository = removeRepository;
+                window.loadSpecificFile = loadSpecificFile;
+                window.showBranchSelector = showBranchSelector;
+                window.loadBranchContent = loadBranchContent;
+                window.loadFileFromStructure = loadFileFromStructure;
+                
+                // New repository discovery functions
+                window.discoverRepositories = discoverRepositories;
+                window.addMultipleRepositories = addMultipleRepositories;
+                window.hideDiscoveryResults = hideDiscoveryResults;
+                window.showApiKeyDialog = showApiKeyDialog;
+                window.hideApiKeyDialog = hideApiKeyDialog;
+                window.saveApiKey = saveApiKey;
+                window.clearApiKey = clearApiKey;
+                
+                loadSearchHistory();
+                setupAutocomplete();
+                initializeExamples();
+                
+                // Enhanced enter key handling
+                document.getElementById('repo-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        addRepository(); // This will now trigger discovery if repo is empty
+                    }
+                });
+                
+                document.getElementById('owner-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const repoInput = document.getElementById('repo-input');
+                        if (repoInput.value.trim()) {
+                            repoInput.focus();
+                        } else {
+                            // Trigger discovery if no repo name
+                            discoverRepositories();
+                        }
+                    }
+                });
+                
+                // API key input handling
+                document.getElementById('api-key-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        saveApiKey();
+                    }
+                });
+                
+                // Initialize rate limit display
+                setTimeout(() => {
+                    if (httpClient) {
+                        httpClient.updateRateLimitDisplay();
+                    }
+                }, 500);
+                
+                setTimeout(() => {
+                    NotificationManager.info('Enhanced Repository Viewer ready! 🔍 Try discovering repos by username - Press ? for shortcuts.', 5000);
+                }, 1000);
+                
+                console.log('🎉 Enhanced Multi-Repository Viewer v2.0 loaded successfully!');
+                console.log('🔍 New features: Repository auto-discovery, API key support, branch discovery');
+                console.log('🌿 Features: Branch discovery, comprehensive directory exploration, smart entry point detection');
+                console.log('📋 CORS-aware with enhanced fallback methods');
+                
+            } catch (error) {
+                console.error('Initialization error:', error);
+                NotificationManager.error('Failed to initialize application');
+            }
+        });
+
+        // Auto-save
+        setInterval(() => {
+            try {
+                saveSearchHistory();
+            } catch (error) {
+                console.warn('Failed to auto-save:', error);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>
